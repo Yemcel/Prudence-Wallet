@@ -1,0 +1,20 @@
+# dependencies
+node_modules/
+
+# secrets - real env files are never committed, only .env.example
+.env
+backend/.env
+frontend/.env
+
+# local database
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# build output
+frontend/dist/
+
+# OS/editor cruft
+.DS_Store
+Thumbs.db
