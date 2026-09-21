@@ -26,6 +26,7 @@ export default function App() {
   const [addOpen, setAddOpen] = useState(false);
   const [connectOpen, setConnectOpen] = useState(false);
   const [loadError, setLoadError] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [nudges, setNudges] = useState([]);
   const [homeCurrency, setHomeCurrency] = useState("USD");
 
@@ -48,6 +49,8 @@ export default function App() {
       setLoadError(null);
     } catch (e) {
       setLoadError(`Couldn't reach the backend at the configured API URL. Is it running? (${e.message})`);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -106,6 +109,12 @@ export default function App() {
 
       {loadError && (
         <div style={{ ...styles.card, marginBottom: 22, color: "#A83B32", fontSize: 13 }}>{loadError}</div>
+      )}
+
+      {loading && !loadError && (
+        <div style={{ ...styles.card, marginBottom: 22, color: "#6B7280", fontSize: 13 }}>
+          Loading your ledger... the free hosting tier can take up to a minute to wake up after being idle.
+        </div>
       )}
 
       <NudgeBanner nudges={nudges} onDismiss={handleDismissNudge} />
