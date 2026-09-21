@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "Prudence Wallet — Checkout Reflection",
+  "version": "1.0.0",
+  "description": "Shows a brief reflection prompt before you complete a purchase online, using the same Important-to-Wasteful ranking as the Prudence Wallet app.",
+  "permissions": ["storage"],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "css": ["overlay.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}

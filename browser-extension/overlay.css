@@ -1,0 +1,88 @@
+#prudence-reflect-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(28, 36, 48, 0.72);
+  z-index: 2147483647;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+}
+
+#prudence-reflect-overlay .pr-card {
+  background: #F6F4EF;
+  color: #1C2430;
+  border-radius: 16px;
+  padding: 28px 26px;
+  max-width: 380px;
+  width: calc(100% - 40px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+  text-align: center;
+}
+
+#prudence-reflect-overlay .pr-eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: #8B9A5B;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+#prudence-reflect-overlay h2 {
+  margin: 0 0 6px;
+  font-size: 20px;
+}
+
+#prudence-reflect-overlay p {
+  margin: 0 0 14px;
+  font-size: 14px;
+  color: #3B4453;
+}
+
+#prudence-reflect-overlay .pr-sub {
+  font-size: 12px;
+  color: #8B95A5;
+}
+
+#prudence-reflect-overlay .pr-ranks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+#prudence-reflect-overlay .pr-chip {
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid;
+  border-radius: 999px;
+  padding: 5px 10px;
+}
+
+#prudence-reflect-overlay .pr-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+#prudence-reflect-overlay button {
+  border: none;
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+#prudence-reflect-overlay #pr-continue {
+  background: #1C2430;
+  color: #F6F4EF;
+}
+
+#prudence-reflect-overlay #pr-close {
+  background: transparent;
+  color: #8B95A5;
+}
