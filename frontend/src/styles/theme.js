@@ -38,6 +38,9 @@ export const styles = {
   projCard: { background: "#1C2430", color: "#F6F4EF", borderRadius: 12, padding: "14px 10px", textAlign: "center" },
   projLabel: { fontSize: 10.5, letterSpacing: "0.06em", textTransform: "uppercase", color: "#A8B0BE", marginBottom: 6 },
   projValue: { fontFamily: "'JetBrains Mono', monospace", fontSize: 16, fontWeight: 500, color: "#C08A2E" },
+  cutToggleRow: { display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 12 },
+  cutToggleLabel: { fontSize: 12, color: "#6B7280" },
+  cutToggleGroup: { display: "flex", gap: 6 },
 
   ruleItem: { fontSize: 13, color: "#5C8168", fontStyle: "italic", padding: "8px 0", borderBottom: "1px solid #E7E2D6" },
 
