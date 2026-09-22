@@ -187,25 +187,46 @@ export function claimOrphanedDataForFirstUser(userId) {
   const { count } = db.prepare("SELECT COUNT(*) as count FROM users").get();
   if (count !== 1) return; // not the first user — leave orphaned rows alone
 
-  for (const table of ["accounts", "transactions", "plaid_items", "paypal_connections", "nudges", "learned_rules", "rank_overrides"]) {
-    db.prepare(`UPDATE ${table} SET user_id = ? WHERE user_id IS NULL`).run(userId);
-  }
+  // acc_manual/acc_paypal's id gets renamed below, but that id is also a
+  // FOREIGN KEY held by transactions/plaid_items/paypal_connections. Node's
+  // sqlite module enforces foreign keys immediately by default, so doing the
+  // parent rename and the child repoints as separate auto-committed
+  // statements is a chicken-and-egg problem: rename the parent first and the
+  // still-pointing children instantly violate the constraint; repoint the
+  // children first and they'd reference a parent id that doesn't exist yet
+  // either way. Wrapping the whole thing in one transaction with
+  // defer_foreign_keys ON postpones the integrity check until COMMIT, once
+  // every row is consistent again — and SQLite resets the pragma to OFF the
+  // moment the transaction ends, so it can't leak into unrelated queries.
+  db.exec("BEGIN");
+  try {
+    db.exec("PRAGMA defer_foreign_keys = ON");
 
-  // acc_manual / acc_paypal used to be fixed, shared ids. Every new
-  // connection from now on uses a per-user id (acc_manual_<userId> etc) to
-  // avoid colliding with another user's row — rename this user's legacy
-  // rows to match, cascading the id change to whatever referenced it.
-  const renames = [
-    ["acc_manual", `acc_manual_${userId}`],
-    ["acc_paypal", `acc_paypal_${userId}`],
-  ];
-  for (const [oldId, newId] of renames) {
-    const exists = db.prepare("SELECT id FROM accounts WHERE id = ?").get(oldId);
-    if (!exists) continue;
-    db.prepare("UPDATE accounts SET id = ? WHERE id = ?").run(newId, oldId);
-    db.prepare("UPDATE transactions SET account_id = ? WHERE account_id = ?").run(newId, oldId);
-    db.prepare("UPDATE plaid_items SET account_id = ? WHERE account_id = ?").run(newId, oldId);
-    db.prepare("UPDATE paypal_connections SET account_id = ? WHERE account_id = ?").run(newId, oldId);
+    for (const table of ["accounts", "transactions", "plaid_items", "paypal_connections", "nudges", "learned_rules", "rank_overrides"]) {
+      db.prepare(`UPDATE ${table} SET user_id = ? WHERE user_id IS NULL`).run(userId);
+    }
+
+    // acc_manual / acc_paypal used to be fixed, shared ids. Every new
+    // connection from now on uses a per-user id (acc_manual_<userId> etc) to
+    // avoid colliding with another user's row — rename this user's legacy
+    // rows to match, cascading the id change to whatever referenced it.
+    const renames = [
+      ["acc_manual", `acc_manual_${userId}`],
+      ["acc_paypal", `acc_paypal_${userId}`],
+    ];
+    for (const [oldId, newId] of renames) {
+      const exists = db.prepare("SELECT id FROM accounts WHERE id = ?").get(oldId);
+      if (!exists) continue;
+      db.prepare("UPDATE accounts SET id = ? WHERE id = ?").run(newId, oldId);
+      db.prepare("UPDATE transactions SET account_id = ? WHERE account_id = ?").run(newId, oldId);
+      db.prepare("UPDATE plaid_items SET account_id = ? WHERE account_id = ?").run(newId, oldId);
+      db.prepare("UPDATE paypal_connections SET account_id = ? WHERE account_id = ?").run(newId, oldId);
+    }
+
+    db.exec("COMMIT");
+  } catch (err) {
+    db.exec("ROLLBACK");
+    throw err;
   }
 }
 
