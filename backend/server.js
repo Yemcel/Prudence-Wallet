@@ -12,6 +12,14 @@ import { paypalRouter } from "./routes/paypal.js";
 import { nudgesRouter } from "./routes/nudges.js";
 import { settingsRouter } from "./routes/settings.js";
 
+// Safety net: with no listener here, an unhandled promise rejection
+// anywhere in the app (a route that forgot a try/catch, say) crashes the
+// entire Node process by default — taking down every other in-flight
+// request with it. Logging and continuing is far better for an API server.
+process.on("unhandledRejection", (err) => {
+  console.error("Unhandled rejection:", err);
+});
+
 seedIfEmpty();
 
 const app = express();
