@@ -21,16 +21,16 @@ function withHomeAmounts(rows, homeCurrency) {
 transactionsRouter.get("/", async (req, res) => {
   try {
     await ensureFreshRates();
-    const homeCurrency = getHomeCurrency();
+    const homeCurrency = getHomeCurrency(req.userId);
     const rows = db
       .prepare(
         `SELECT t.*, a.name as account_name
          FROM transactions t
          LEFT JOIN accounts a ON a.id = t.account_id
-         WHERE t.rank IS NOT NULL
+         WHERE t.rank IS NOT NULL AND t.user_id = ?
          ORDER BY t.date DESC, t.created_at DESC`
       )
-      .all();
+      .all(req.userId);
     res.json(withHomeAmounts(rows, homeCurrency));
   } catch (err) {
     res.status(502).json({ error: err.message });
@@ -40,16 +40,16 @@ transactionsRouter.get("/", async (req, res) => {
 transactionsRouter.get("/pending", async (req, res) => {
   try {
     await ensureFreshRates();
-    const homeCurrency = getHomeCurrency();
+    const homeCurrency = getHomeCurrency(req.userId);
     const rows = db
       .prepare(
         `SELECT t.*, a.name as account_name
          FROM transactions t
          LEFT JOIN accounts a ON a.id = t.account_id
-         WHERE t.rank IS NULL
+         WHERE t.rank IS NULL AND t.user_id = ?
          ORDER BY t.date DESC, t.created_at DESC`
       )
-      .all();
+      .all(req.userId);
     res.json(withHomeAmounts(rows, homeCurrency));
   } catch (err) {
     res.status(502).json({ error: err.message });
@@ -61,8 +61,8 @@ transactionsRouter.get("/pending", async (req, res) => {
 transactionsRouter.get("/summary", async (req, res) => {
   try {
     await ensureFreshRates();
-    const homeCurrency = getHomeCurrency();
-    const all = db.prepare("SELECT tier, amount, currency, rank FROM transactions").all();
+    const homeCurrency = getHomeCurrency(req.userId);
+    const all = db.prepare("SELECT tier, amount, currency, rank FROM transactions WHERE user_id = ?").all(req.userId);
 
     const byTier = { aggregator: 0, wallet_api: 0, manual: 0 };
     const byRank = Object.fromEntries(RANKS.map((r) => [r.key, 0]));
@@ -106,11 +106,19 @@ transactionsRouter.post("/manual", (req, res) => {
     return res.status(400).json({ error: "merchant and amount are required" });
   }
 
+  // Per-user manual account id — a shared fixed id like the old 'acc_manual'
+  // would collide across different users' manual entries.
+  const accountId = `acc_manual_${req.userId}`;
+  db.prepare(
+    `INSERT OR IGNORE INTO accounts (id, name, tier, connected, note, user_id)
+     VALUES (?, 'Cash & unsupported rails', 'manual', 1, 'No API exists for this — logged by hand', ?)`
+  ).run(accountId, req.userId);
+
   const id = `tx_${randomUUID()}`;
   db.prepare(
-    `INSERT INTO transactions (id, date, merchant, amount, currency, tier, account_id, rank, rank_source, needs_receipt)
-     VALUES (?, ?, ?, ?, ?, 'manual', 'acc_manual', NULL, NULL, ?)`
-  ).run(id, date || new Date().toISOString().slice(0, 10), merchant, amount, currency, needsReceipt ? 1 : 0);
+    `INSERT INTO transactions (id, date, merchant, amount, currency, tier, account_id, rank, rank_source, needs_receipt, user_id)
+     VALUES (?, ?, ?, ?, ?, 'manual', ?, NULL, NULL, ?, ?)`
+  ).run(id, date || new Date().toISOString().slice(0, 10), merchant, amount, currency, accountId, needsReceipt ? 1 : 0, req.userId);
 
   const created = db.prepare("SELECT * FROM transactions WHERE id = ?").get(id);
   checkAndCreateNudge(created); // near-real-time — fires as soon as the entry is added, not at month end
@@ -122,15 +130,15 @@ transactionsRouter.patch("/:id/rank", (req, res) => {
   const valid = RANKS.some((r) => r.key === rank);
   if (!valid) return res.status(400).json({ error: `rank must be one of: ${RANKS.map((r) => r.key).join(", ")}` });
 
-  const existing = db.prepare("SELECT * FROM transactions WHERE id = ?").get(req.params.id);
+  const existing = db.prepare("SELECT * FROM transactions WHERE id = ? AND user_id = ?").get(req.params.id, req.userId);
   if (!existing) return res.status(404).json({ error: "transaction not found" });
 
   db.prepare("UPDATE transactions SET rank = ?, rank_source = ? WHERE id = ?").run(rank, rankSource, req.params.id);
 
   if (existing.rank !== rank) {
     db.prepare(
-      "INSERT INTO rank_overrides (transaction_id, old_rank, new_rank) VALUES (?, ?, ?)"
-    ).run(req.params.id, existing.rank, rank);
+      "INSERT INTO rank_overrides (transaction_id, old_rank, new_rank, user_id) VALUES (?, ?, ?, ?)"
+    ).run(req.params.id, existing.rank, rank, req.userId);
   }
 
   const updated = db.prepare("SELECT * FROM transactions WHERE id = ?").get(req.params.id);

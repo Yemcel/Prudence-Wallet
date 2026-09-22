@@ -49,11 +49,16 @@ export function convert(amount, fromCurrency, toCurrency) {
   return toCurrency === "USD" ? amountInUsd : amountInUsd * getRate(toCurrency);
 }
 
-export function getHomeCurrency() {
-  const row = db.prepare("SELECT home_currency FROM settings WHERE id = 1").get();
+// Home currency is per-user now (used to be a single global row) —
+// defaults a brand-new user to USD until they set their own.
+export function getHomeCurrency(userId) {
+  const row = db.prepare("SELECT home_currency FROM user_settings WHERE user_id = ?").get(userId);
   return row?.home_currency || "USD";
 }
 
-export function setHomeCurrency(currency) {
-  db.prepare("UPDATE settings SET home_currency = ? WHERE id = 1").run(currency);
+export function setHomeCurrency(userId, currency) {
+  db.prepare(
+    `INSERT INTO user_settings (user_id, home_currency) VALUES (?, ?)
+     ON CONFLICT(user_id) DO UPDATE SET home_currency = excluded.home_currency`
+  ).run(userId, currency);
 }

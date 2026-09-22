@@ -9,6 +9,13 @@ export const db = new DatabaseSync(DB_PATH);
 db.exec("PRAGMA journal_mode = WAL");
 
 db.exec(`
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  email TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS accounts (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
@@ -33,6 +40,8 @@ CREATE TABLE IF NOT EXISTS transactions (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Original shape kept here so a fresh (pre-auth) database still creates it —
+-- migrateLearnedRules() below rebuilds it with a per-user unique constraint.
 CREATE TABLE IF NOT EXISTS learned_rules (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   rule_text TEXT NOT NULL UNIQUE,
@@ -74,8 +83,16 @@ CREATE TABLE IF NOT EXISTS fx_rates (
   fetched_at TEXT NOT NULL
 );
 
+-- Legacy singleton settings row — superseded by user_settings below now that
+-- home currency is per-user. Left in place (unused) rather than dropped, so
+-- this migration doesn't need to touch/delete anything.
 CREATE TABLE IF NOT EXISTS settings (
   id INTEGER PRIMARY KEY CHECK (id = 1),
+  home_currency TEXT NOT NULL DEFAULT 'USD'
+);
+
+CREATE TABLE IF NOT EXISTS user_settings (
+  user_id TEXT PRIMARY KEY REFERENCES users(id),
   home_currency TEXT NOT NULL DEFAULT 'USD'
 );
 
@@ -87,6 +104,52 @@ CREATE TABLE IF NOT EXISTS rank_overrides (
   changed_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 `);
+
+// --- Migrations -------------------------------------------------------
+// SQLite has no "ADD COLUMN IF NOT EXISTS" and can't alter a constraint in
+// place, so both helpers below check current shape before touching
+// anything — this file runs on every server boot and must be safe to run
+// repeatedly (idempotent), including against the already-deployed database.
+
+function addColumnIfMissing(table, columnDef) {
+  const columnName = columnDef.split(" ")[0];
+  const existing = db.prepare(`PRAGMA table_info(${table})`).all();
+  const hasColumn = existing.some((c) => c.name === columnName);
+  if (!hasColumn) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${columnDef}`);
+  }
+}
+
+// learned_rules originally had a GLOBAL UNIQUE(rule_text) — fine for one
+// user, but it would silently block (INSERT OR IGNORE) a second user from
+// ever saving a rule another user's coach had already learned, or worse,
+// leave their query looking at a row still tagged with someone else's
+// user_id. Rebuilding with UNIQUE(user_id, rule_text) fixes both.
+function migrateLearnedRules() {
+  const info = db.prepare("PRAGMA table_info(learned_rules)").all();
+  const hasUserId = info.some((c) => c.name === "user_id");
+  if (hasUserId) return; // already migrated
+
+  db.exec(`
+    CREATE TABLE learned_rules_new (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT REFERENCES users(id),
+      rule_text TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(user_id, rule_text)
+    );
+    INSERT INTO learned_rules_new (id, rule_text, created_at)
+      SELECT id, rule_text, created_at FROM learned_rules;
+    DROP TABLE learned_rules;
+    ALTER TABLE learned_rules_new RENAME TO learned_rules;
+  `);
+}
+
+migrateLearnedRules();
+
+for (const table of ["accounts", "transactions", "plaid_items", "paypal_connections", "nudges", "rank_overrides"]) {
+  addColumnIfMissing(table, "user_id TEXT REFERENCES users(id)");
+}
 
 export function seedIfEmpty() {
   const { count } = db.prepare("SELECT COUNT(*) as count FROM accounts").get();
@@ -114,8 +177,36 @@ export function seedIfEmpty() {
 
     for (const tx of seedTx) insertTx.run(tx);
   }
+}
 
-  db.prepare("INSERT OR IGNORE INTO settings (id, home_currency) VALUES (1, 'USD')").run();
+// Whoever creates the very first account inherits whatever demo/test data
+// already existed before auth shipped — otherwise that data is orphaned
+// (user_id IS NULL) forever, invisible to every query. Every signup after
+// this one gets a genuinely empty wallet, which is the whole point.
+export function claimOrphanedDataForFirstUser(userId) {
+  const { count } = db.prepare("SELECT COUNT(*) as count FROM users").get();
+  if (count !== 1) return; // not the first user — leave orphaned rows alone
+
+  for (const table of ["accounts", "transactions", "plaid_items", "paypal_connections", "nudges", "learned_rules", "rank_overrides"]) {
+    db.prepare(`UPDATE ${table} SET user_id = ? WHERE user_id IS NULL`).run(userId);
+  }
+
+  // acc_manual / acc_paypal used to be fixed, shared ids. Every new
+  // connection from now on uses a per-user id (acc_manual_<userId> etc) to
+  // avoid colliding with another user's row — rename this user's legacy
+  // rows to match, cascading the id change to whatever referenced it.
+  const renames = [
+    ["acc_manual", `acc_manual_${userId}`],
+    ["acc_paypal", `acc_paypal_${userId}`],
+  ];
+  for (const [oldId, newId] of renames) {
+    const exists = db.prepare("SELECT id FROM accounts WHERE id = ?").get(oldId);
+    if (!exists) continue;
+    db.prepare("UPDATE accounts SET id = ? WHERE id = ?").run(newId, oldId);
+    db.prepare("UPDATE transactions SET account_id = ? WHERE account_id = ?").run(newId, oldId);
+    db.prepare("UPDATE plaid_items SET account_id = ? WHERE account_id = ?").run(newId, oldId);
+    db.prepare("UPDATE paypal_connections SET account_id = ? WHERE account_id = ?").run(newId, oldId);
+  }
 }
 
 // Used by both the Plaid and PayPal sync jobs — inserts a transaction if its
@@ -130,15 +221,16 @@ export function upsertExternalTransaction({
   category = null,
   tier,
   accountId,
+  userId,
 }) {
   const id = `tx_${externalId}`;
   const exists = db.prepare("SELECT id FROM transactions WHERE id = ?").get(id);
   if (exists) return { inserted: false, id };
 
   db.prepare(
-    `INSERT INTO transactions (id, date, time, merchant, amount, currency, category, tier, account_id, rank, rank_source, needs_receipt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, 0)`
-  ).run(id, date, time, merchant, amount, currency, category, tier, accountId);
+    `INSERT INTO transactions (id, date, time, merchant, amount, currency, category, tier, account_id, rank, rank_source, needs_receipt, user_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, 0, ?)`
+  ).run(id, date, time, merchant, amount, currency, category, tier, accountId, userId);
 
   return { inserted: true, id };
 }

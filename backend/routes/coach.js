@@ -15,12 +15,12 @@ coachRouter.post("/classify", async (req, res) => {
     return res.status(400).json({ error: "transactionId and answer are required" });
   }
 
-  const transaction = db.prepare("SELECT * FROM transactions WHERE id = ?").get(transactionId);
+  const transaction = db.prepare("SELECT * FROM transactions WHERE id = ? AND user_id = ?").get(transactionId, req.userId);
   if (!transaction) return res.status(404).json({ error: "transaction not found" });
 
   const learnedRules = db
-    .prepare("SELECT rule_text FROM learned_rules ORDER BY created_at DESC LIMIT 30")
-    .all()
+    .prepare("SELECT rule_text FROM learned_rules WHERE user_id = ? ORDER BY created_at DESC LIMIT 30")
+    .all(req.userId)
     .map((r) => r.rule_text);
 
   let result;
@@ -34,7 +34,7 @@ coachRouter.post("/classify", async (req, res) => {
   db.prepare("UPDATE transactions SET rank = ?, rank_source = 'coach' WHERE id = ?").run(rankKey, transactionId);
 
   if (result.learned_rule && result.learned_rule !== "null") {
-    db.prepare("INSERT OR IGNORE INTO learned_rules (rule_text) VALUES (?)").run(result.learned_rule);
+    db.prepare("INSERT OR IGNORE INTO learned_rules (rule_text, user_id) VALUES (?, ?)").run(result.learned_rule, req.userId);
   }
 
   const updatedTransaction = db.prepare("SELECT * FROM transactions WHERE id = ?").get(transactionId);
@@ -47,6 +47,6 @@ coachRouter.post("/classify", async (req, res) => {
 
 // GET /api/coach/rules — what the coach has learned so far
 coachRouter.get("/rules", (req, res) => {
-  const rows = db.prepare("SELECT rule_text, created_at FROM learned_rules ORDER BY created_at DESC").all();
+  const rows = db.prepare("SELECT rule_text, created_at FROM learned_rules WHERE user_id = ? ORDER BY created_at DESC").all(req.userId);
   res.json(rows);
 });

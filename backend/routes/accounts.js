@@ -9,6 +9,6 @@ export const accountsRouter = Router();
 // integration per wallet platform (PayPal, Venmo, ...), and 'manual' has no API — it's
 // always available as the fallback tier for cash and unsupported rails.
 accountsRouter.get("/", (req, res) => {
-  const rows = db.prepare("SELECT * FROM accounts").all();
+  const rows = db.prepare("SELECT * FROM accounts WHERE user_id = ?").all(req.userId);
   res.json(rows);
 });

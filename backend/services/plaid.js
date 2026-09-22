@@ -53,7 +53,7 @@ export async function createLinkToken(userId) {
   return response.data.link_token;
 }
 
-export async function exchangePublicToken(publicToken) {
+export async function exchangePublicToken(publicToken, userId) {
   assertConfigured();
   const response = await plaidClient.itemPublicTokenExchange({ public_token: publicToken });
   const { access_token: accessToken, item_id: itemId } = response.data;
@@ -70,14 +70,16 @@ export async function exchangePublicToken(publicToken) {
     institutionName = instResp.data.institution.name;
   }
 
+  // acc_plaid_<itemId> is already globally unique (Plaid item ids are
+  // unique per connection), so no per-user collision risk here.
   const accountId = `acc_plaid_${itemId}`;
   db.prepare(
-    "INSERT OR IGNORE INTO accounts (id, name, tier, connected, note) VALUES (?, ?, 'aggregator', 1, ?)"
-  ).run(accountId, institutionName, "Bank feed via Plaid — also covers Apple Pay & Google Pay taps on linked cards");
+    "INSERT OR IGNORE INTO accounts (id, name, tier, connected, note, user_id) VALUES (?, ?, 'aggregator', 1, ?, ?)"
+  ).run(accountId, institutionName, "Bank feed via Plaid — also covers Apple Pay & Google Pay taps on linked cards", userId);
 
   db.prepare(
-    "INSERT INTO plaid_items (item_id, access_token, institution_name, account_id) VALUES (?, ?, ?, ?)"
-  ).run(itemId, accessToken, institutionName, accountId);
+    "INSERT INTO plaid_items (item_id, access_token, institution_name, account_id, user_id) VALUES (?, ?, ?, ?, ?)"
+  ).run(itemId, accessToken, institutionName, accountId, userId);
 
   return { itemId, institutionName, accountId };
 }
@@ -112,6 +114,7 @@ export async function syncTransactionsForItem(itemRow) {
       category: tx.personal_finance_category?.primary || null,
       tier: "aggregator",
       accountId: itemRow.account_id,
+      userId: itemRow.user_id,
     });
     if (result.inserted) {
       const fullTx = db.prepare("SELECT * FROM transactions WHERE id = ?").get(result.id);
@@ -124,8 +127,14 @@ export async function syncTransactionsForItem(itemRow) {
   return { newTransactions: added.length };
 }
 
-export async function syncAllPlaidItems() {
-  const items = db.prepare("SELECT * FROM plaid_items").all();
+// userId: pass req.userId from the /sync route to only sync that user's
+// items. Called with no argument from anywhere that genuinely needs every
+// item across every user (there's no such caller today — the webhook path
+// calls syncTransactionsForItem directly for a single already-known item).
+export async function syncAllPlaidItems(userId) {
+  const items = userId
+    ? db.prepare("SELECT * FROM plaid_items WHERE user_id = ?").all(userId)
+    : db.prepare("SELECT * FROM plaid_items").all();
   const results = [];
   for (const item of items) {
     try {

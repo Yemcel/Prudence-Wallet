@@ -43,21 +43,23 @@ async function getAccessToken(clientId, clientSecret) {
   return { accessToken: data.access_token, expiresIn: data.expires_in };
 }
 
-export async function connectPaypalAccount({ clientId, clientSecret, label }) {
+export async function connectPaypalAccount({ clientId, clientSecret, label, userId }) {
   const { accessToken, expiresIn } = await getAccessToken(clientId, clientSecret);
   const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
 
-  const accountId = "acc_paypal";
+  // Per-user account id — a shared fixed id like the old 'acc_paypal' would
+  // collide across different users' PayPal connections.
+  const accountId = `acc_paypal_${userId}`;
   db.prepare(
-    "INSERT OR IGNORE INTO accounts (id, name, tier, connected, note) VALUES (?, ?, 'wallet_api', 1, ?)"
-  ).run(accountId, label || "PayPal", "Wallet balance — separate from bank feed, requires its own connection");
+    "INSERT OR IGNORE INTO accounts (id, name, tier, connected, note, user_id) VALUES (?, ?, 'wallet_api', 1, ?, ?)"
+  ).run(accountId, label || "PayPal", "Wallet balance — separate from bank feed, requires its own connection", userId);
 
   // NOTE: storing the secret so we can refresh later — in a real product,
   // encrypt this at rest, don't store it in plaintext like this prototype does.
   db.prepare(
-    `INSERT INTO paypal_connections (paypal_account_email, access_token, token_expires_at, account_id)
-     VALUES (?, ?, ?, ?)`
-  ).run(label || null, accessToken, expiresAt, accountId);
+    `INSERT INTO paypal_connections (paypal_account_email, access_token, token_expires_at, account_id, user_id)
+     VALUES (?, ?, ?, ?, ?)`
+  ).run(label || null, accessToken, expiresAt, accountId, userId);
 
   return { accountId, expiresAt };
 }
@@ -106,6 +108,7 @@ export async function syncPaypalConnection(connectionRow) {
       currency: info.transaction_amount?.currency_code || "USD",
       tier: "wallet_api",
       accountId: connectionRow.account_id,
+      userId: connectionRow.user_id,
     });
     if (result.inserted) {
       inserted += 1;
@@ -119,8 +122,12 @@ export async function syncPaypalConnection(connectionRow) {
   return { checked: transactions.length, inserted };
 }
 
-export async function syncAllPaypalConnections() {
-  const connections = db.prepare("SELECT * FROM paypal_connections").all();
+// userId: pass req.userId from the /sync route to only sync that user's
+// connections.
+export async function syncAllPaypalConnections(userId) {
+  const connections = userId
+    ? db.prepare("SELECT * FROM paypal_connections WHERE user_id = ?").all(userId)
+    : db.prepare("SELECT * FROM paypal_connections").all();
   const results = [];
   for (const conn of connections) {
     try {

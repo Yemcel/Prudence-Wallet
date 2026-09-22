@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { styles } from "./styles/theme.js";
-import { api } from "./lib/api.js";
+import { api, getToken, AuthError } from "./lib/api.js";
 
+import AuthScreen from "./components/AuthScreen.jsx";
 import CoverageCard from "./components/CoverageCard.jsx";
 import SpendingDonut from "./components/SpendingDonut.jsx";
 import PendingList from "./components/PendingList.jsx";
@@ -17,6 +18,9 @@ import NudgeBanner from "./components/NudgeBanner.jsx";
 import HomeCurrencySelector from "./components/HomeCurrencySelector.jsx";
 
 export default function App() {
+  const [authChecked, setAuthChecked] = useState(false);
+  const [user, setUser] = useState(null);
+
   const [summary, setSummary] = useState(null);
   const [pending, setPending] = useState([]);
   const [ranked, setRanked] = useState([]);
@@ -29,6 +33,20 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [nudges, setNudges] = useState([]);
   const [homeCurrency, setHomeCurrency] = useState("USD");
+
+  // Validate any stored token once on load rather than trusting its mere
+  // presence — it may have expired since the last visit.
+  useEffect(() => {
+    if (!getToken()) {
+      setAuthChecked(true);
+      return;
+    }
+    api
+      .me()
+      .then(({ user }) => setUser(user))
+      .catch(() => setUser(null))
+      .finally(() => setAuthChecked(true));
+  }, []);
 
   const refresh = useCallback(async () => {
     try {
@@ -48,6 +66,10 @@ export default function App() {
       setHomeCurrency(settingsData.homeCurrency);
       setLoadError(null);
     } catch (e) {
+      if (e instanceof AuthError) {
+        setUser(null);
+        return;
+      }
       setLoadError(`Couldn't reach the backend at the configured API URL. Is it running? (${e.message})`);
     } finally {
       setLoading(false);
@@ -58,12 +80,14 @@ export default function App() {
     try {
       const data = await api.getNudges();
       setNudges(data);
-    } catch {
-      // nudges are a nice-to-have overlay — a failed poll shouldn't break the rest of the app
+    } catch (e) {
+      if (e instanceof AuthError) setUser(null);
+      // otherwise: nudges are a nice-to-have overlay — a failed poll shouldn't break the rest of the app
     }
   }, []);
 
   useEffect(() => {
+    if (!user) return;
     refresh();
     refreshNudges();
     // Polling stands in for a push channel (websocket/SSE) in this prototype —
@@ -71,7 +95,7 @@ export default function App() {
     // instead of polling every 15s.
     const interval = setInterval(refreshNudges, 15000);
     return () => clearInterval(interval);
-  }, [refresh, refreshNudges]);
+  }, [user, refresh, refreshNudges]);
 
   const handleResolved = () => {
     setActiveTx(null);
@@ -97,6 +121,24 @@ export default function App() {
     await api.dismissNudge(id);
   };
 
+  const handleLogout = () => {
+    api.logout();
+    setUser(null);
+  };
+
+  if (!authChecked) return null; // brief instant — avoids a login-screen flash for already-signed-in users
+
+  if (!user) {
+    return (
+      <AuthScreen
+        onAuthenticated={({ user }) => {
+          setLoading(true);
+          setUser(user);
+        }}
+      />
+    );
+  }
+
   return (
     <div style={styles.page}>
       <header style={{ ...styles.header, display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 12 }}>
@@ -104,7 +146,10 @@ export default function App() {
           <div style={styles.eyebrow}>Ledger</div>
           <h1 style={styles.title}>Every source, one honest picture</h1>
         </div>
-        <HomeCurrencySelector homeCurrency={homeCurrency} onChanged={(c) => { setHomeCurrency(c); refresh(); }} />
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <HomeCurrencySelector homeCurrency={homeCurrency} onChanged={(c) => { setHomeCurrency(c); refresh(); }} />
+          <button style={styles.modalClose} onClick={handleLogout}>Sign out</button>
+        </div>
       </header>
 
       {loadError && (

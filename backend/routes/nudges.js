@@ -7,10 +7,10 @@ export const nudgesRouter = Router();
 // Frontend polls this on an interval to simulate "near real-time" without
 // needing websockets for a prototype.
 nudgesRouter.get("/", (req, res) => {
-  res.json(getActiveNudges());
+  res.json(getActiveNudges(req.userId));
 });
 
 nudgesRouter.patch("/:id/dismiss", (req, res) => {
-  dismissNudge(req.params.id);
+  dismissNudge(req.params.id, req.userId);
   res.json({ ok: true });
 });

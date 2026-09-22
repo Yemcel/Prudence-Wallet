@@ -52,13 +52,13 @@ export function checkAndCreateNudge(tx) {
     .prepare(
       `SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as total
        FROM transactions
-       WHERE date >= ? AND id != ?
+       WHERE date >= ? AND id != ? AND user_id = ?
          AND (
            (category IS NOT NULL AND LOWER(category) = LOWER(?))
            OR LOWER(merchant) LIKE ?
          )`
     )
-    .get(windowStart, tx.id, tx.category || "___none___", `%${merchantKeyword}%`);
+    .get(windowStart, tx.id, tx.user_id, tx.category || "___none___", `%${merchantKeyword}%`);
 
   const occurrence = count + 1; // including this transaction
   if (occurrence < NUDGE_THRESHOLD) return null;
@@ -69,22 +69,22 @@ export function checkAndCreateNudge(tx) {
     tx.currency
   )} total. Still feel worth it, or is this one worth reconsidering?`;
 
-  db.prepare("INSERT INTO nudges (transaction_id, message) VALUES (?, ?)").run(tx.id, message);
+  db.prepare("INSERT INTO nudges (transaction_id, message, user_id) VALUES (?, ?, ?)").run(tx.id, message, tx.user_id);
   return message;
 }
 
-export function getActiveNudges() {
+export function getActiveNudges(userId) {
   return db
     .prepare(
       `SELECT n.*, t.merchant, t.amount, t.currency, t.date
        FROM nudges n
        JOIN transactions t ON t.id = n.transaction_id
-       WHERE n.dismissed = 0
+       WHERE n.dismissed = 0 AND n.user_id = ?
        ORDER BY n.created_at DESC`
     )
-    .all();
+    .all(userId);
 }
 
-export function dismissNudge(id) {
-  db.prepare("UPDATE nudges SET dismissed = 1 WHERE id = ?").run(id);
+export function dismissNudge(id, userId) {
+  db.prepare("UPDATE nudges SET dismissed = 1 WHERE id = ? AND user_id = ?").run(id, userId);
 }

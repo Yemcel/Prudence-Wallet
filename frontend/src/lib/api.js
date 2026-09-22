@@ -1,18 +1,64 @@
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
+const TOKEN_KEY = "prudence_token";
+
+export function getToken() {
+  try {
+    return localStorage.getItem(TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setToken(token) {
+  try {
+    if (token) localStorage.setItem(TOKEN_KEY, token);
+    else localStorage.removeItem(TOKEN_KEY);
+  } catch {
+    // localStorage unavailable (private browsing, etc.) — session just won't persist across reloads
+  }
+}
+
+export class AuthError extends Error {}
 
 async function request(path, options = {}) {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { "Content-Type": "application/json" },
-    ...options,
-  });
+  const token = getToken();
+  const headers = { "Content-Type": "application/json", ...options.headers };
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
+
+  if (res.status === 401) {
+    setToken(null);
+    throw new AuthError("Your session has expired — please sign in again");
+  }
+
   if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`${options.method || "GET"} ${path} failed (${res.status}): ${body}`);
+    let message = `${options.method || "GET"} ${path} failed (${res.status})`;
+    try {
+      const body = await res.json();
+      if (body.error) message = body.error;
+    } catch {
+      // response wasn't JSON — fall back to the generic message above
+    }
+    throw new Error(message);
   }
   return res.json();
 }
 
 export const api = {
+  signup: async (email, password) => {
+    const result = await request("/api/auth/signup", { method: "POST", body: JSON.stringify({ email, password }) });
+    setToken(result.token);
+    return result;
+  },
+  login: async (email, password) => {
+    const result = await request("/api/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
+    setToken(result.token);
+    return result;
+  },
+  me: () => request("/api/auth/me"),
+  logout: () => setToken(null),
+
   getTransactions: () => request("/api/transactions"),
   getPending: () => request("/api/transactions/pending"),
   getSummary: () => request("/api/transactions/summary"),

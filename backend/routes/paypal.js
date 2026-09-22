@@ -13,17 +13,17 @@ paypalRouter.post("/connect", async (req, res) => {
     return res.status(400).json({ error: "clientId and clientSecret are required" });
   }
   try {
-    const result = await connectPaypalAccount({ clientId, clientSecret, label });
+    const result = await connectPaypalAccount({ clientId, clientSecret, label, userId: req.userId });
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// POST /api/paypal/sync — pull new transactions for every connected PayPal account
+// POST /api/paypal/sync — pull new transactions for this user's connected PayPal accounts
 paypalRouter.post("/sync", async (req, res) => {
   try {
-    const results = await syncAllPaypalConnections();
+    const results = await syncAllPaypalConnections(req.userId);
     res.json({ results });
   } catch (err) {
     res.status(500).json({ error: err.message });
