@@ -1,0 +1,8 @@
+﻿[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.prudencewallet.www.app",
+    "sha256_cert_fingerprints": ["92:04:FA:3E:DE:D5:ED:44:C8:DD:AC:EF:51:36:BF:65:4C:06:69:D6:86:88:CB:55:7D:1A:46:1F:76:64:EE:47"]
+  }
+}]
