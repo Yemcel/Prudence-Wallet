@@ -3,8 +3,12 @@ import { getHomeCurrency, setHomeCurrency, ensureFreshRates } from "../services/
 
 export const settingsRouter = Router();
 
-settingsRouter.get("/", (req, res) => {
-  res.json({ homeCurrency: getHomeCurrency(req.userId) });
+settingsRouter.get("/", async (req, res) => {
+  try {
+    res.json({ homeCurrency: await getHomeCurrency(req.userId) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 settingsRouter.put("/", async (req, res) => {
@@ -14,7 +18,7 @@ settingsRouter.put("/", async (req, res) => {
   }
   try {
     await ensureFreshRates(); // validates rates exist / are fetchable before committing to the new home currency
-    setHomeCurrency(req.userId, homeCurrency.toUpperCase());
+    await setHomeCurrency(req.userId, homeCurrency.toUpperCase());
     res.json({ homeCurrency: homeCurrency.toUpperCase() });
   } catch (err) {
     res.status(502).json({ error: err.message });

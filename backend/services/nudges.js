@@ -42,23 +42,27 @@ function money(amount, currency) {
 // a PayPal sync, or a manual add. Cheap, deterministic, no API call needed
 // (unlike the coach, which does call the model) — this only needs to be
 // fast and reliable, not nuanced.
-export function checkAndCreateNudge(tx) {
+export async function checkAndCreateNudge(tx) {
   if (!tx || !looksDiscretionary(tx)) return null;
 
   const windowStart = new Date(Date.now() - WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const merchantKeyword = (tx.merchant || "").toLowerCase().split(" ")[0];
 
-  const { count, total } = db
-    .prepare(
-      `SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as total
-       FROM transactions
-       WHERE date >= ? AND id != ? AND user_id = ?
-         AND (
-           (category IS NOT NULL AND LOWER(category) = LOWER(?))
-           OR LOWER(merchant) LIKE ?
-         )`
-    )
-    .get(windowStart, tx.id, tx.user_id, tx.category || "___none___", `%${merchantKeyword}%`);
+  const row = await db.get(
+    `SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as total
+     FROM transactions
+     WHERE date >= ? AND id != ? AND user_id = ?
+       AND (
+         (category IS NOT NULL AND LOWER(category) = LOWER(?))
+         OR LOWER(merchant) LIKE ?
+       )`,
+    [windowStart, tx.id, tx.user_id, tx.category || "___none___", `%${merchantKeyword}%`]
+  );
+  // COUNT(*) comes back over libSQL as a BigInt in some client configs —
+  // Number(...) it explicitly so `+ 1` below can't throw a BigInt/Number
+  // mixing TypeError.
+  const count = Number(row.count);
+  const total = Number(row.total);
 
   const occurrence = count + 1; // including this transaction
   if (occurrence < NUDGE_THRESHOLD) return null;
@@ -69,22 +73,21 @@ export function checkAndCreateNudge(tx) {
     tx.currency
   )} total. Still feel worth it, or is this one worth reconsidering?`;
 
-  db.prepare("INSERT INTO nudges (transaction_id, message, user_id) VALUES (?, ?, ?)").run(tx.id, message, tx.user_id);
+  await db.run("INSERT INTO nudges (transaction_id, message, user_id) VALUES (?, ?, ?)", [tx.id, message, tx.user_id]);
   return message;
 }
 
-export function getActiveNudges(userId) {
-  return db
-    .prepare(
-      `SELECT n.*, t.merchant, t.amount, t.currency, t.date
-       FROM nudges n
-       JOIN transactions t ON t.id = n.transaction_id
-       WHERE n.dismissed = 0 AND n.user_id = ?
-       ORDER BY n.created_at DESC`
-    )
-    .all(userId);
+export async function getActiveNudges(userId) {
+  return db.all(
+    `SELECT n.*, t.merchant, t.amount, t.currency, t.date
+     FROM nudges n
+     JOIN transactions t ON t.id = n.transaction_id
+     WHERE n.dismissed = 0 AND n.user_id = ?
+     ORDER BY n.created_at DESC`,
+    [userId]
+  );
 }
 
-export function dismissNudge(id, userId) {
-  db.prepare("UPDATE nudges SET dismissed = 1 WHERE id = ? AND user_id = ?").run(id, userId);
+export async function dismissNudge(id, userId) {
+  await db.run("UPDATE nudges SET dismissed = 1 WHERE id = ? AND user_id = ?", [id, userId]);
 }

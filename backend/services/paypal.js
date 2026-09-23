@@ -50,16 +50,18 @@ export async function connectPaypalAccount({ clientId, clientSecret, label, user
   // Per-user account id — a shared fixed id like the old 'acc_paypal' would
   // collide across different users' PayPal connections.
   const accountId = `acc_paypal_${userId}`;
-  db.prepare(
-    "INSERT OR IGNORE INTO accounts (id, name, tier, connected, note, user_id) VALUES (?, ?, 'wallet_api', 1, ?, ?)"
-  ).run(accountId, label || "PayPal", "Wallet balance — separate from bank feed, requires its own connection", userId);
+  await db.run(
+    "INSERT OR IGNORE INTO accounts (id, name, tier, connected, note, user_id) VALUES (?, ?, 'wallet_api', 1, ?, ?)",
+    [accountId, label || "PayPal", "Wallet balance — separate from bank feed, requires its own connection", userId]
+  );
 
   // NOTE: storing the secret so we can refresh later — in a real product,
   // encrypt this at rest, don't store it in plaintext like this prototype does.
-  db.prepare(
+  await db.run(
     `INSERT INTO paypal_connections (paypal_account_email, access_token, token_expires_at, account_id, user_id)
-     VALUES (?, ?, ?, ?, ?)`
-  ).run(label || null, accessToken, expiresAt, accountId, userId);
+     VALUES (?, ?, ?, ?, ?)`,
+    [label || null, accessToken, expiresAt, accountId, userId]
+  );
 
   return { accountId, expiresAt };
 }
@@ -100,7 +102,7 @@ export async function syncPaypalConnection(connectionRow) {
     const amount = parseFloat(info.transaction_amount?.value || "0");
     if (amount >= 0) continue; // only track outflows as spending
 
-    const result = upsertExternalTransaction({
+    const result = await upsertExternalTransaction({
       externalId: `paypal_${info.transaction_id}`,
       date: (info.transaction_initiation_date || "").slice(0, 10),
       merchant: info.transaction_subject || info.payer_info?.email_address || "PayPal transaction",
@@ -112,12 +114,12 @@ export async function syncPaypalConnection(connectionRow) {
     });
     if (result.inserted) {
       inserted += 1;
-      const fullTx = db.prepare("SELECT * FROM transactions WHERE id = ?").get(result.id);
-      checkAndCreateNudge(fullTx);
+      const fullTx = await db.get("SELECT * FROM transactions WHERE id = ?", [result.id]);
+      await checkAndCreateNudge(fullTx);
     }
   }
 
-  db.prepare("UPDATE paypal_connections SET last_synced_at = ? WHERE id = ?").run(endDate, connectionRow.id);
+  await db.run("UPDATE paypal_connections SET last_synced_at = ? WHERE id = ?", [endDate, connectionRow.id]);
 
   return { checked: transactions.length, inserted };
 }
@@ -126,8 +128,8 @@ export async function syncPaypalConnection(connectionRow) {
 // connections.
 export async function syncAllPaypalConnections(userId) {
   const connections = userId
-    ? db.prepare("SELECT * FROM paypal_connections WHERE user_id = ?").all(userId)
-    : db.prepare("SELECT * FROM paypal_connections").all();
+    ? await db.all("SELECT * FROM paypal_connections WHERE user_id = ?", [userId])
+    : await db.all("SELECT * FROM paypal_connections");
   const results = [];
   for (const conn of connections) {
     try {

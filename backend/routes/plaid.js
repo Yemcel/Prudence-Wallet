@@ -50,7 +50,7 @@ plaidRouter.post("/webhook", async (req, res) => {
   if (webhookType !== "TRANSACTIONS") return;
   if (!["SYNC_UPDATES_AVAILABLE", "DEFAULT_UPDATE", "INITIAL_UPDATE", "HISTORICAL_UPDATE"].includes(webhookCode)) return;
 
-  const item = getPlaidItemByItemId(itemId);
+  const item = await getPlaidItemByItemId(itemId);
   if (!item) return;
 
   try {

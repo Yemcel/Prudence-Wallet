@@ -22,17 +22,17 @@ authRouter.post("/signup", async (req, res) => {
     if (!password || password.length < 8) return res.status(400).json({ error: "Password must be at least 8 characters" });
 
     const normalizedEmail = email.trim().toLowerCase();
-    const existing = db.prepare("SELECT id FROM users WHERE email = ?").get(normalizedEmail);
+    const existing = await db.get("SELECT id FROM users WHERE email = ?", [normalizedEmail]);
     if (existing) return res.status(409).json({ error: "An account with that email already exists" });
 
     const id = randomUUID();
     const passwordHash = await hashPassword(password);
-    db.prepare("INSERT INTO users (id, email, password_hash) VALUES (?, ?, ?)").run(id, normalizedEmail, passwordHash);
+    await db.run("INSERT INTO users (id, email, password_hash) VALUES (?, ?, ?)", [id, normalizedEmail, passwordHash]);
 
     // First account ever created inherits whatever demo/test data was
     // already here before auth shipped. Everyone who signs up after gets a
     // genuinely empty wallet — see the function for why this matters.
-    claimOrphanedDataForFirstUser(id);
+    await claimOrphanedDataForFirstUser(id);
 
     const token = signToken(id);
     res.status(201).json({ token, user: { id, email: normalizedEmail } });
@@ -48,7 +48,7 @@ authRouter.post("/login", async (req, res) => {
     if (!isValidEmail(email) || !password) return res.status(400).json({ error: "Email and password are required" });
 
     const normalizedEmail = email.trim().toLowerCase();
-    const user = db.prepare("SELECT * FROM users WHERE email = ?").get(normalizedEmail);
+    const user = await db.get("SELECT * FROM users WHERE email = ?", [normalizedEmail]);
     if (!user) return res.status(401).json({ error: "Incorrect email or password" });
 
     const valid = await verifyPassword(password, user.password_hash);
@@ -62,9 +62,9 @@ authRouter.post("/login", async (req, res) => {
   }
 });
 
-authRouter.get("/me", requireAuth, (req, res) => {
+authRouter.get("/me", requireAuth, async (req, res) => {
   try {
-    const user = db.prepare("SELECT id, email FROM users WHERE id = ?").get(req.userId);
+    const user = await db.get("SELECT id, email FROM users WHERE id = ?", [req.userId]);
     if (!user) return res.status(404).json({ error: "User not found" });
     res.json({ user });
   } catch (err) {
@@ -79,13 +79,13 @@ authRouter.delete("/me", requireAuth, async (req, res) => {
     const { password } = req.body;
     if (!password) return res.status(400).json({ error: "Enter your password to confirm" });
 
-    const user = db.prepare("SELECT * FROM users WHERE id = ?").get(req.userId);
+    const user = await db.get("SELECT * FROM users WHERE id = ?", [req.userId]);
     if (!user) return res.status(404).json({ error: "User not found" });
 
     const valid = await verifyPassword(password, user.password_hash);
     if (!valid) return res.status(401).json({ error: "Incorrect password" });
 
-    deleteAllUserData(req.userId);
+    await deleteAllUserData(req.userId);
     res.json({ ok: true });
   } catch (err) {
     console.error("Account deletion failed:", err.message);

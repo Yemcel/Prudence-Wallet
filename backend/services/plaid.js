@@ -73,13 +73,15 @@ export async function exchangePublicToken(publicToken, userId) {
   // acc_plaid_<itemId> is already globally unique (Plaid item ids are
   // unique per connection), so no per-user collision risk here.
   const accountId = `acc_plaid_${itemId}`;
-  db.prepare(
-    "INSERT OR IGNORE INTO accounts (id, name, tier, connected, note, user_id) VALUES (?, ?, 'aggregator', 1, ?, ?)"
-  ).run(accountId, institutionName, "Bank feed via Plaid — also covers Apple Pay & Google Pay taps on linked cards", userId);
+  await db.run(
+    "INSERT OR IGNORE INTO accounts (id, name, tier, connected, note, user_id) VALUES (?, ?, 'aggregator', 1, ?, ?)",
+    [accountId, institutionName, "Bank feed via Plaid — also covers Apple Pay & Google Pay taps on linked cards", userId]
+  );
 
-  db.prepare(
-    "INSERT INTO plaid_items (item_id, access_token, institution_name, account_id, user_id) VALUES (?, ?, ?, ?, ?)"
-  ).run(itemId, accessToken, institutionName, accountId, userId);
+  await db.run(
+    "INSERT INTO plaid_items (item_id, access_token, institution_name, account_id, user_id) VALUES (?, ?, ?, ?, ?)",
+    [itemId, accessToken, institutionName, accountId, userId]
+  );
 
   return { itemId, institutionName, accountId };
 }
@@ -105,7 +107,7 @@ export async function syncTransactionsForItem(itemRow) {
   }
 
   for (const tx of added) {
-    const result = upsertExternalTransaction({
+    const result = await upsertExternalTransaction({
       externalId: `plaid_${tx.transaction_id}`,
       date: tx.date,
       merchant: tx.merchant_name || tx.name,
@@ -117,12 +119,12 @@ export async function syncTransactionsForItem(itemRow) {
       userId: itemRow.user_id,
     });
     if (result.inserted) {
-      const fullTx = db.prepare("SELECT * FROM transactions WHERE id = ?").get(result.id);
-      checkAndCreateNudge(fullTx); // near-real-time — fires right after this transaction lands, not at month end
+      const fullTx = await db.get("SELECT * FROM transactions WHERE id = ?", [result.id]);
+      await checkAndCreateNudge(fullTx); // near-real-time — fires right after this transaction lands, not at month end
     }
   }
 
-  db.prepare("UPDATE plaid_items SET cursor = ? WHERE item_id = ?").run(cursor, itemRow.item_id);
+  await db.run("UPDATE plaid_items SET cursor = ? WHERE item_id = ?", [cursor, itemRow.item_id]);
 
   return { newTransactions: added.length };
 }
@@ -133,8 +135,8 @@ export async function syncTransactionsForItem(itemRow) {
 // calls syncTransactionsForItem directly for a single already-known item).
 export async function syncAllPlaidItems(userId) {
   const items = userId
-    ? db.prepare("SELECT * FROM plaid_items WHERE user_id = ?").all(userId)
-    : db.prepare("SELECT * FROM plaid_items").all();
+    ? await db.all("SELECT * FROM plaid_items WHERE user_id = ?", [userId])
+    : await db.all("SELECT * FROM plaid_items");
   const results = [];
   for (const item of items) {
     try {
@@ -147,6 +149,6 @@ export async function syncAllPlaidItems(userId) {
   return results;
 }
 
-export function getPlaidItemByItemId(itemId) {
-  return db.prepare("SELECT * FROM plaid_items WHERE item_id = ?").get(itemId);
+export async function getPlaidItemByItemId(itemId) {
+  return db.get("SELECT * FROM plaid_items WHERE item_id = ?", [itemId]);
 }

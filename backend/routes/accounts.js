@@ -8,7 +8,11 @@ export const accountsRouter = Router();
 // Edge, Tink, etc — pick by target region), 'wallet_api' rows come from a dedicated
 // integration per wallet platform (PayPal, Venmo, ...), and 'manual' has no API — it's
 // always available as the fallback tier for cash and unsupported rails.
-accountsRouter.get("/", (req, res) => {
-  const rows = db.prepare("SELECT * FROM accounts WHERE user_id = ?").all(req.userId);
-  res.json(rows);
+accountsRouter.get("/", async (req, res) => {
+  try {
+    const rows = await db.all("SELECT * FROM accounts WHERE user_id = ?", [req.userId]);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });

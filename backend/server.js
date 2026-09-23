@@ -20,7 +20,7 @@ process.on("unhandledRejection", (err) => {
   console.error("Unhandled rejection:", err);
 });
 
-seedIfEmpty();
+await seedIfEmpty();
 
 const app = express();
 app.use(cors());
