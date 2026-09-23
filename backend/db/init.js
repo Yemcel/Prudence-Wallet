@@ -6,13 +6,19 @@ import { createClient } from "@libsql/client";
 // which silently erased user accounts and data. Turso persists properly and
 // has a genuinely free tier.
 function assertConfigured() {
-  const { TURSO_DATABASE_URL, TURSO_AUTH_TOKEN } = process.env;
-  if (!TURSO_DATABASE_URL || !TURSO_AUTH_TOKEN) {
+  // .trim() matters here: a stray trailing newline or space picked up when
+  // pasting a long token through a browser env-var field is invisible but
+  // makes the Authorization header invalid, which crashes deep inside
+  // hrana-client's HTTP layer with a confusing WebIDL error instead of a
+  // readable one — trimming both values up front avoids that entirely.
+  const url = process.env.TURSO_DATABASE_URL?.trim();
+  const authToken = process.env.TURSO_AUTH_TOKEN?.trim();
+  if (!url || !authToken) {
     throw new Error(
       "TURSO_DATABASE_URL / TURSO_AUTH_TOKEN not set — add them to backend/.env locally and to the backend service's environment variables on Render (get both from your database's page at app.turso.tech)"
     );
   }
-  return { url: TURSO_DATABASE_URL, authToken: TURSO_AUTH_TOKEN };
+  return { url, authToken };
 }
 
 const client = createClient(assertConfigured());
