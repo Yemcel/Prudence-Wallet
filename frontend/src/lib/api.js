@@ -28,8 +28,23 @@ async function request(path, options = {}) {
   const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
 
   if (res.status === 401) {
-    setToken(null);
-    throw new AuthError("Your session has expired — please sign in again");
+    // A 401 only means "your session expired" when we actually sent a token
+    // that got rejected. Login itself also returns 401 for a plain wrong
+    // password — with no token on the request, that's not an expired
+    // session, so surface the server's real message instead of overwriting
+    // it with a "session expired" text that makes no sense on a first sign-in.
+    if (token) {
+      setToken(null);
+      throw new AuthError("Your session has expired — please sign in again");
+    }
+    let message = "Incorrect email or password";
+    try {
+      const body = await res.json();
+      if (body.error) message = body.error;
+    } catch {
+      // response wasn't JSON — fall back to the generic message above
+    }
+    throw new Error(message);
   }
 
   if (!res.ok) {
