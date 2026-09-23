@@ -58,6 +58,8 @@ export const api = {
   },
   me: () => request("/api/auth/me"),
   logout: () => setToken(null),
+  deleteAccount: (password) =>
+    request("/api/auth/me", { method: "DELETE", body: JSON.stringify({ password }) }),
 
   getTransactions: () => request("/api/transactions"),
   getPending: () => request("/api/transactions/pending"),

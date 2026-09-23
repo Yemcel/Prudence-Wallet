@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { randomUUID } from "node:crypto";
-import { db, claimOrphanedDataForFirstUser } from "../db/init.js";
+import { db, claimOrphanedDataForFirstUser, deleteAllUserData } from "../db/init.js";
 import { hashPassword, verifyPassword, signToken } from "../services/auth.js";
 import { requireAuth } from "../middleware/auth.js";
 
@@ -68,6 +68,27 @@ authRouter.get("/me", requireAuth, (req, res) => {
     if (!user) return res.status(404).json({ error: "User not found" });
     res.json({ user });
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Password-confirmed account + data deletion — see deleteAllUserData for why
+// this exists and how it stays FK-safe.
+authRouter.delete("/me", requireAuth, async (req, res) => {
+  try {
+    const { password } = req.body;
+    if (!password) return res.status(400).json({ error: "Enter your password to confirm" });
+
+    const user = db.prepare("SELECT * FROM users WHERE id = ?").get(req.userId);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const valid = await verifyPassword(password, user.password_hash);
+    if (!valid) return res.status(401).json({ error: "Incorrect password" });
+
+    deleteAllUserData(req.userId);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("Account deletion failed:", err.message);
     res.status(500).json({ error: err.message });
   }
 });

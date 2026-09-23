@@ -230,6 +230,29 @@ export function claimOrphanedDataForFirstUser(userId) {
   }
 }
 
+// Called when a signed-in user asks to delete their account. Google Play
+// requires an in-app path for this (not just a policy promise) from any app
+// that supports account creation — doubly so for one handling financial data
+// via Plaid/PayPal. Reuses the same deferred-FK transaction pattern as
+// claimOrphanedDataForFirstUser above, since deleting across several
+// FK-linked tables has the same ordering hazard renaming did.
+export function deleteAllUserData(userId) {
+  db.exec("BEGIN");
+  try {
+    db.exec("PRAGMA defer_foreign_keys = ON");
+
+    for (const table of ["nudges", "rank_overrides", "transactions", "plaid_items", "paypal_connections", "accounts", "learned_rules", "user_settings"]) {
+      db.prepare(`DELETE FROM ${table} WHERE user_id = ?`).run(userId);
+    }
+    db.prepare("DELETE FROM users WHERE id = ?").run(userId);
+
+    db.exec("COMMIT");
+  } catch (err) {
+    db.exec("ROLLBACK");
+    throw err;
+  }
+}
+
 // Used by both the Plaid and PayPal sync jobs — inserts a transaction if its
 // external id hasn't been seen before, does nothing if it has (idempotent sync).
 export function upsertExternalTransaction({

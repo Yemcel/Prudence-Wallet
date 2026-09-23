@@ -14,6 +14,7 @@ import TransactionList from "./components/TransactionList.jsx";
 import CoachModal from "./components/CoachModal.jsx";
 import AddManualModal from "./components/AddManualModal.jsx";
 import ConnectAccountsModal from "./components/ConnectAccountsModal.jsx";
+import DeleteAccountModal from "./components/DeleteAccountModal.jsx";
 import NudgeBanner from "./components/NudgeBanner.jsx";
 import HomeCurrencySelector from "./components/HomeCurrencySelector.jsx";
 
@@ -29,6 +30,7 @@ export default function App() {
   const [activeTx, setActiveTx] = useState(null);
   const [addOpen, setAddOpen] = useState(false);
   const [connectOpen, setConnectOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [loadError, setLoadError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [nudges, setNudges] = useState([]);
@@ -149,6 +151,7 @@ export default function App() {
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <HomeCurrencySelector homeCurrency={homeCurrency} onChanged={(c) => { setHomeCurrency(c); refresh(); }} />
           <button style={styles.modalClose} onClick={handleLogout}>Sign out</button>
+          <button style={{ ...styles.modalClose, color: "#A83B32" }} onClick={() => setDeleteOpen(true)}>Delete account</button>
         </div>
       </header>
 
@@ -190,6 +193,7 @@ export default function App() {
           }}
         />
       )}
+      {deleteOpen && <DeleteAccountModal onClose={() => setDeleteOpen(false)} onDeleted={handleLogout} />}
     </div>
   );
 }
