@@ -29,6 +29,7 @@ coachRouter.post("/classify", async (req, res) => {
     try {
       result = await classifyTransaction({ transaction, userAnswer: answer, learnedRules });
     } catch (err) {
+      console.error("Coach classification failed:", err.message);
       return res.status(502).json({ error: err.message });
     }
 
@@ -46,6 +47,7 @@ coachRouter.post("/classify", async (req, res) => {
       learnedRule: result.learned_rule !== "null" ? result.learned_rule : null,
     });
   } catch (err) {
+    console.error("Coach classify route failed:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -56,6 +58,7 @@ coachRouter.get("/rules", async (req, res) => {
     const rows = await db.all("SELECT rule_text, created_at FROM learned_rules WHERE user_id = ? ORDER BY created_at DESC", [req.userId]);
     res.json(rows);
   } catch (err) {
+    console.error("Fetching learned rules failed:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
