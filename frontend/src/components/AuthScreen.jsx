@@ -8,10 +8,15 @@ export default function AuthScreen({ onAuthenticated }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [agreedToPolicy, setAgreedToPolicy] = useState(false);
 
   const submit = async (e) => {
     e.preventDefault();
     setError(null);
+    if (mode === "signup" && !agreedToPolicy) {
+      setError("Please agree to the Privacy Policy to continue.");
+      return;
+    }
     setBusy(true);
     try {
       const result = mode === "login" ? await api.login(email, password) : await api.signup(email, password);
@@ -52,9 +57,30 @@ export default function AuthScreen({ onAuthenticated }) {
             required
           />
 
+          {mode === "signup" && (
+            <label style={{ display: "flex", alignItems: "flex-start", gap: 8, margin: "12px 0", fontSize: 14 }}>
+              <input
+                type="checkbox"
+                checked={agreedToPolicy}
+                onChange={(e) => setAgreedToPolicy(e.target.checked)}
+                style={{ marginTop: 3 }}
+              />
+              <span>
+                I agree to the{" "}
+                <a href="https://prudencewallet.com/privacy" target="_blank" rel="noopener noreferrer">
+                  Privacy Policy
+                </a>
+              </span>
+            </label>
+          )}
+
           {error && <div style={{ ...styles.errorText, marginBottom: 10 }}>{error}</div>}
 
-          <button type="submit" style={{ ...styles.modalBtnPrimary, width: "100%" }} disabled={busy}>
+          <button
+            type="submit"
+            style={{ ...styles.modalBtnPrimary, width: "100%" }}
+            disabled={busy || (mode === "signup" && !agreedToPolicy)}
+          >
             {busy ? "Please wait…" : mode === "login" ? "Sign in" : "Create account"}
           </button>
         </form>
