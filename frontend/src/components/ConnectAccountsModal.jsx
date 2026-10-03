@@ -101,21 +101,39 @@ function PaypalConnectForm({ onConnected }) {
 }
 
 export default function ConnectAccountsModal({ onClose, onConnected }) {
+  // PayPal currently needs the user's own developer API keys, which most
+  // people won't have — so it's tucked behind a link rather than shown as a
+  // main option. Replace with "Log in with PayPal" once partner access exists.
+  const [showPaypal, setShowPaypal] = useState(false);
+
   return (
     <div style={styles.overlay} onClick={onClose}>
       <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
         <div style={styles.modalTitle}>Connect an account</div>
-        <div style={styles.modalSub}>Bank/card feeds cover Apple Pay and Google Pay automatically. Wallet balances need their own connection.</div>
+        <div style={styles.modalSub}>
+          Bank/card feeds cover Apple Pay and Google Pay automatically, and PayPal purchases paid by card or bank usually
+          show up there too. Anything else can be added by hand.
+        </div>
 
         <div style={{ marginBottom: 20 }}>
           <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>Bank or card</div>
           <PlaidConnectButton onConnected={onConnected} />
         </div>
 
-        <div>
-          <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>PayPal</div>
-          <PaypalConnectForm onConnected={onConnected} />
-        </div>
+        {showPaypal ? (
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>PayPal (advanced)</div>
+            <PaypalConnectForm onConnected={onConnected} />
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowPaypal(true)}
+            style={{ background: "none", border: "none", padding: 0, fontSize: 12, color: "#8B95A5", textDecoration: "underline", cursor: "pointer" }}
+          >
+            Advanced: connect PayPal with your own API keys
+          </button>
+        )}
 
         <button style={{ ...styles.modalClose, marginTop: 16 }} onClick={onClose}>
           Close
