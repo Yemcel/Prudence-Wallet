@@ -1,7 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
-import { seedIfEmpty } from "./db/init.js";
+import "./db/init.js"; // runs schema setup and migrations on boot
 import { authRouter } from "./routes/auth.js";
 import { requireAuth } from "./middleware/auth.js";
 import { transactionsRouter } from "./routes/transactions.js";
@@ -19,8 +19,6 @@ import { settingsRouter } from "./routes/settings.js";
 process.on("unhandledRejection", (err) => {
   console.error("Unhandled rejection:", err);
 });
-
-await seedIfEmpty();
 
 const app = express();
 app.use(cors());

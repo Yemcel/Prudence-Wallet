@@ -178,32 +178,56 @@ for (const table of ["accounts", "transactions", "plaid_items", "paypal_connecti
   await addColumnIfMissing(table, "user_id TEXT REFERENCES users(id)");
 }
 
-// --- Seed data --------------------------------------------------------
-export async function seedIfEmpty() {
-  const { rows } = await client.execute("SELECT COUNT(*) as count FROM accounts");
-  if (Number(rows[0].count) !== 0) return;
+// Stored so a PayPal access token can be renewed when it expires (the secret
+// is encrypted — see services/secretBox.js).
+await addColumnIfMissing("paypal_connections", "client_id TEXT");
+await addColumnIfMissing("paypal_connections", "client_secret_enc TEXT");
 
-  const insertAccount = "INSERT INTO accounts (id, name, tier, connected, note) VALUES (?, ?, ?, 1, ?)";
-  const insertTx = `
-    INSERT INTO transactions (id, date, time, merchant, amount, currency, category, tier, account_id, rank, rank_source, needs_receipt)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `;
+// --- Demo data removal ------------------------------------------------
+// Earlier builds seeded a sample wallet (a fake Chase card, a demo PayPal
+// row and six sample transactions), and the first person to sign up
+// inherited it. Real users shouldn't see fake spending, so it is no longer
+// seeded and any copy already in the database is removed here. Safe to run
+// on every boot: the ids below only ever belonged to the demo data, and once
+// they're gone every statement matches nothing.
+const DEMO_TRANSACTION_IDS = ["tx_1", "tx_2", "tx_3", "tx_101", "tx_102", "tx_103"];
+const DEMO_PAYPAL_NOTE = "Wallet balance — separate connection, not seen by the bank feed";
 
+async function removeDemoData() {
+  const placeholders = DEMO_TRANSACTION_IDS.map(() => "?").join(", ");
   await client.batch(
     [
-      { sql: insertAccount, args: ["acc_chase", "Chase •••4471", "aggregator", "Bank feed — also covers Apple Pay & Google Pay taps on this card"] },
-      { sql: insertAccount, args: ["acc_paypal", "PayPal", "wallet_api", "Wallet balance — separate connection, not seen by the bank feed"] },
-      { sql: insertAccount, args: ["acc_manual", "Cash & unsupported rails", "manual", "No API exists for this — logged by hand"] },
-      { sql: insertTx, args: ["tx_1", "2026-08-12", null, "Whole Foods Market", 84.21, "USD", "Groceries", "aggregator", "acc_chase", "necessary", "default", 0] },
-      { sql: insertTx, args: ["tx_2", "2026-08-11", null, "Rent — Meridian Apts", 1450.0, "USD", "Housing", "aggregator", "acc_chase", "important", "default", 0] },
-      { sql: insertTx, args: ["tx_3", "2026-08-06", null, "Steam — Game Purchase", 59.99, "USD", "Entertainment", "aggregator", "acc_chase", "wasteful", "default", 0] },
-      { sql: insertTx, args: ["tx_101", "2026-08-13", "23:40", "Uber", 22.3, "USD", "Transport", "aggregator", "acc_chase", null, null, 0] },
-      { sql: insertTx, args: ["tx_102", "2026-08-12", "19:05", "Send to Jordan", 32.0, "USD", null, "wallet_api", "acc_paypal", null, null, 0] },
-      { sql: insertTx, args: ["tx_103", "2026-08-14", null, "Café de Flore, Paris", 6.5, "EUR", "Dining", "manual", "acc_manual", "treat", "default", 0] },
+      // Children first, so no foreign key is left pointing at a deleted row.
+      { sql: `DELETE FROM nudges WHERE transaction_id IN (${placeholders})`, args: DEMO_TRANSACTION_IDS },
+      { sql: `DELETE FROM rank_overrides WHERE transaction_id IN (${placeholders})`, args: DEMO_TRANSACTION_IDS },
+      { sql: `DELETE FROM transactions WHERE id IN (${placeholders})`, args: DEMO_TRANSACTION_IDS },
+      // The fake Chase card — only if nothing real ever got attached to it.
+      {
+        sql: `DELETE FROM accounts WHERE id = 'acc_chase'
+                AND NOT EXISTS (SELECT 1 FROM transactions WHERE account_id = 'acc_chase')
+                AND NOT EXISTS (SELECT 1 FROM plaid_items WHERE account_id = 'acc_chase')`,
+        args: [],
+      },
+      // The demo PayPal row (shared id, or renamed per-user for the first
+      // signup): drop it when no real PayPal connection uses it...
+      {
+        sql: `DELETE FROM accounts WHERE tier = 'wallet_api' AND note = ?
+                AND NOT EXISTS (SELECT 1 FROM paypal_connections WHERE paypal_connections.account_id = accounts.id)
+                AND NOT EXISTS (SELECT 1 FROM transactions WHERE transactions.account_id = accounts.id)`,
+        args: [DEMO_PAYPAL_NOTE],
+      },
+      // ...and when a real connection did attach to it, keep the row but give
+      // it the real description.
+      {
+        sql: "UPDATE accounts SET note = 'Wallet balance — separate from bank feed, requires its own connection' WHERE tier = 'wallet_api' AND note = ?",
+        args: [DEMO_PAYPAL_NOTE],
+      },
     ],
     "write"
   );
 }
+
+await removeDemoData();
 
 // Whoever creates the very first account inherits whatever demo/test data
 // already existed before auth shipped — otherwise that data is orphaned

@@ -1,5 +1,6 @@
 import { db, upsertExternalTransaction } from "../db/init.js";
 import { checkAndCreateNudge } from "./nudges.js";
+import { encryptSecret, decryptSecret, assertSecretBoxConfigured } from "./secretBox.js";
 
 // --- IMPORTANT: read this before building on top of it -------------------
 // Unlike Plaid, PayPal does not offer a simple "Login with PayPal, we hand
@@ -22,6 +23,10 @@ import { checkAndCreateNudge } from "./nudges.js";
 //
 // This file implements option 1 (bring-your-own-credentials), which is
 // honest about being a stopgap, not a Plaid-equivalent experience.
+//
+// Each connection stores the client id and the client secret (encrypted with
+// PAYPAL_CREDENTIALS_KEY, see secretBox.js) so its access token can be
+// renewed automatically when it expires.
 // ---------------------------------------------------------------------
 
 const PAYPAL_API_BASE =
@@ -43,27 +48,72 @@ async function getAccessToken(clientId, clientSecret) {
   return { accessToken: data.access_token, expiresIn: data.expires_in };
 }
 
+const PAYPAL_ACCOUNT_NOTE = "Wallet balance — separate from bank feed, requires its own connection";
+
 export async function connectPaypalAccount({ clientId, clientSecret, label, userId }) {
+  // Fail before contacting PayPal if the server can't store the secret.
+  assertSecretBoxConfigured();
+
   const { accessToken, expiresIn } = await getAccessToken(clientId, clientSecret);
   const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
 
   // Per-user account id — a shared fixed id like the old 'acc_paypal' would
-  // collide across different users' PayPal connections.
+  // collide across different users' PayPal connections. The row may already
+  // exist (a reconnect, or the first user's renamed demo row), so make sure
+  // it carries the real name and note either way.
   const accountId = `acc_paypal_${userId}`;
   await db.run(
     "INSERT OR IGNORE INTO accounts (id, name, tier, connected, note, user_id) VALUES (?, ?, 'wallet_api', 1, ?, ?)",
-    [accountId, label || "PayPal", "Wallet balance — separate from bank feed, requires its own connection", userId]
+    [accountId, label || "PayPal", PAYPAL_ACCOUNT_NOTE, userId]
   );
+  await db.run("UPDATE accounts SET name = ?, note = ?, connected = 1 WHERE id = ? AND user_id = ?", [
+    label || "PayPal",
+    PAYPAL_ACCOUNT_NOTE,
+    accountId,
+    userId,
+  ]);
 
-  // NOTE: storing the secret so we can refresh later — in a real product,
-  // encrypt this at rest, don't store it in plaintext like this prototype does.
+  // One connection per user's PayPal account: a reconnect replaces the old
+  // row instead of piling up duplicates that would each be synced.
+  await db.run("DELETE FROM paypal_connections WHERE account_id = ? AND user_id = ?", [accountId, userId]);
+
+  // The client id and (encrypted) secret are kept so the access token can be
+  // renewed when it expires — PayPal's tokens last roughly 8–9 hours, and
+  // client-credentials tokens have no refresh token.
   await db.run(
-    `INSERT INTO paypal_connections (paypal_account_email, access_token, token_expires_at, account_id, user_id)
-     VALUES (?, ?, ?, ?, ?)`,
-    [label || null, accessToken, expiresAt, accountId, userId]
+    `INSERT INTO paypal_connections (paypal_account_email, access_token, token_expires_at, account_id, user_id, client_id, client_secret_enc)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [label || null, accessToken, expiresAt, accountId, userId, clientId, encryptSecret(clientSecret)]
   );
 
   return { accountId, expiresAt };
+}
+
+// Returns a usable access token for this connection, renewing it from the
+// stored credentials when it has expired (or is about to, or `force` is set).
+async function getValidAccessToken(connectionRow, { force = false } = {}) {
+  const expiresAt = connectionRow.token_expires_at ? Date.parse(connectionRow.token_expires_at) : 0;
+  const stillValid = expiresAt - Date.now() > 5 * 60 * 1000; // 5-minute safety margin
+  if (stillValid && !force) return connectionRow.access_token;
+
+  if (!connectionRow.client_id || !connectionRow.client_secret_enc) {
+    throw new Error("This PayPal connection has expired and can't renew itself — reconnect PayPal to fix it");
+  }
+
+  const { accessToken, expiresIn } = await getAccessToken(connectionRow.client_id, decryptSecret(connectionRow.client_secret_enc));
+  const newExpiry = new Date(Date.now() + expiresIn * 1000).toISOString();
+  await db.run("UPDATE paypal_connections SET access_token = ?, token_expires_at = ? WHERE id = ?", [
+    accessToken,
+    newExpiry,
+    connectionRow.id,
+  ]);
+  return accessToken;
+}
+
+// PayPal's Transaction Search wants dates without milliseconds,
+// e.g. 2026-10-03T00:00:00Z.
+function paypalDate(date) {
+  return date.toISOString().replace(/\.\d{3}Z$/, "Z");
 }
 
 async function fetchTransactions(accessToken, startDate, endDate) {
@@ -79,7 +129,9 @@ async function fetchTransactions(accessToken, startDate, endDate) {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
   if (!response.ok) {
-    throw new Error(`PayPal transaction search failed (${response.status}): ${await response.text()}`);
+    const err = new Error(`PayPal transaction search failed (${response.status}): ${await response.text()}`);
+    err.status = response.status;
+    throw err;
   }
   const data = await response.json();
   return data.transaction_details || [];
@@ -90,10 +142,22 @@ async function fetchTransactions(accessToken, startDate, endDate) {
 // page through in chunks and store your own sync watermark rather than
 // re-querying the same range repeatedly.
 export async function syncPaypalConnection(connectionRow) {
-  const startDate = connectionRow.last_synced_at || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-  const endDate = new Date().toISOString();
+  const startDate = paypalDate(
+    connectionRow.last_synced_at ? new Date(connectionRow.last_synced_at) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+  );
+  const endDate = paypalDate(new Date());
 
-  const transactions = await fetchTransactions(connectionRow.access_token, startDate, endDate);
+  let accessToken = await getValidAccessToken(connectionRow);
+  let transactions;
+  try {
+    transactions = await fetchTransactions(accessToken, startDate, endDate);
+  } catch (err) {
+    // A token PayPal no longer accepts (revoked, or expired early) — renew
+    // it once from the stored credentials and try again.
+    if (err.status !== 401) throw err;
+    accessToken = await getValidAccessToken(connectionRow, { force: true });
+    transactions = await fetchTransactions(accessToken, startDate, endDate);
+  }
 
   let inserted = 0;
   for (const tx of transactions) {

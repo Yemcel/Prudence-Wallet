@@ -57,7 +57,15 @@ function PaypalConnectForm({ onConnected }) {
     setError(null);
     try {
       const result = await api.connectPaypal({ clientId: clientId.trim(), clientSecret: clientSecret.trim() });
-      await api.syncPaypal();
+      // The sync endpoint reports each connection's outcome rather than
+      // failing the request, so check it — otherwise a failed first sync
+      // would close this window looking exactly like success.
+      const sync = await api.syncPaypal();
+      const failed = (sync?.results || []).find((r) => r.error);
+      if (failed) {
+        setError(`PayPal connected, but the first sync failed: ${failed.error}`);
+        return;
+      }
       onConnected(result);
     } catch (e) {
       setError(e.message);
