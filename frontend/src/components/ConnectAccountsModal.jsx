@@ -3,6 +3,12 @@ import { usePlaidLink } from "react-plaid-link";
 import { styles } from "../styles/theme.js";
 import { api } from "../lib/api.js";
 
+// Plaid runs in Sandbox (fake test banks) until the production decision is
+// made, so the "Connect a bank" button is hidden from closed-test users.
+// To show it, set VITE_PLAID_ENABLED=true in the static site's environment
+// variables on Render and redeploy.
+const PLAID_ENABLED = import.meta.env.VITE_PLAID_ENABLED === "true";
+
 function PlaidConnectButton({ onConnected }) {
   const [linkToken, setLinkToken] = useState(null);
   const [error, setError] = useState(null);
@@ -117,7 +123,13 @@ export default function ConnectAccountsModal({ onClose, onConnected }) {
 
         <div style={{ marginBottom: 20 }}>
           <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>Bank or card</div>
-          <PlaidConnectButton onConnected={onConnected} />
+          {PLAID_ENABLED ? (
+            <PlaidConnectButton onConnected={onConnected} />
+          ) : (
+            <div style={{ fontSize: 13, color: "#8B95A5", lineHeight: 1.5 }}>
+              Bank connections are coming soon. For now, log your spending with "+ Add manual spend" on the main screen.
+            </div>
+          )}
         </div>
 
         {showPaypal ? (
