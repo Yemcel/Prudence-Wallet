@@ -1,5 +1,6 @@
 import { db } from "../db/init.js";
 import { sendEmail, mailerConfigured } from "./mailer.js";
+import { forwardToSentinel } from "./sentinel.js";
 
 // --- Admin alerting ---------------------------------------------------------------
 // Emails the app's operator (ADMIN_EMAIL) about things that need attention:
@@ -60,6 +61,15 @@ async function record(category, title, body) {
 // email: false = record for the digest only.
 export function notifyAdmin({ category, title, body = "", key = title, email = true }) {
   record(category, title, body);
+  // Errors and integration failures also go to Sentinel (security events are
+  // forwarded from logEvent in security.js; routine job runs aren't sent).
+  if (category === "error" || category === "integration" || (category === "job" && email)) {
+    forwardToSentinel({
+      type: category === "job" ? "job_failed" : category === "integration" ? "integration_error" : "server_error",
+      severity: "medium",
+      message: maskPII(`${title}${body ? ` — ${String(body).split("\n")[0]}` : ""}`),
+    });
+  }
   if (!email) return;
 
   const now = Date.now();

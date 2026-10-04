@@ -1,6 +1,7 @@
 import { db } from "../db/init.js";
 import { sendToUser } from "./push.js";
 import { notifyAdmin, maskPII } from "./ops.js";
+import { forwardToSentinel } from "./sentinel.js";
 
 // --- Security monitoring ------------------------------------------------------
 // Two jobs:
@@ -49,6 +50,7 @@ export async function logEvent(event, { userId = null, email = null, ip = null, 
       ip,
       detail ? String(detail).slice(0, 500) : null,
     ]);
+    forwardToSentinel({ type: event, message: detail ? maskPII(detail) : null, email, ip });
   } catch (err) {
     // Logging must never break the request it's describing.
     console.error("Security log write failed:", err.message);
