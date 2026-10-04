@@ -211,6 +211,16 @@ await client.batch(
       detail TEXT
     )`,
     `CREATE INDEX IF NOT EXISTS idx_security_events_created ON security_events (created_at)`,
+    // Admin alerting (services/ops.js): errors, integration failures and job
+    // runs, kept 30 days for the daily digest.
+    `CREATE TABLE IF NOT EXISTS ops_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      category TEXT NOT NULL,
+      title TEXT NOT NULL,
+      body TEXT
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_ops_events_created ON ops_events (created_at)`,
     `CREATE TABLE IF NOT EXISTS auth_throttle (
       key TEXT PRIMARY KEY,
       failures INTEGER NOT NULL DEFAULT 0,

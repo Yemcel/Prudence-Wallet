@@ -1,6 +1,7 @@
 import { db, upsertExternalTransaction } from "../db/init.js";
 import { checkAndCreateNudge } from "./nudges.js";
 import { encryptSecret, decryptSecret, assertSecretBoxConfigured } from "./secretBox.js";
+import { notifyAdmin } from "./ops.js";
 
 // --- IMPORTANT: read this before building on top of it -------------------
 // Unlike Plaid, PayPal does not offer a simple "Login with PayPal, we hand
@@ -200,6 +201,7 @@ export async function syncAllPaypalConnections(userId) {
       const result = await syncPaypalConnection(conn);
       results.push({ connectionId: conn.id, ...result });
     } catch (err) {
+      notifyAdmin({ category: "integration", title: "PayPal sync failed", body: `Connection ${conn.id}: ${err.message}`, key: `paypal:${err.message.slice(0, 60)}` });
       results.push({ connectionId: conn.id, error: err.message });
     }
   }

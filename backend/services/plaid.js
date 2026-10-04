@@ -1,6 +1,7 @@
 import { Configuration, PlaidApi, PlaidEnvironments, Products, CountryCode } from "plaid";
 import { db, upsertExternalTransaction } from "../db/init.js";
 import { checkAndCreateNudge } from "./nudges.js";
+import { notifyAdmin } from "./ops.js";
 
 // --- Client setup -----------------------------------------------------
 // PLAID_ENV should be 'sandbox' while developing (fake institutions, fake
@@ -143,6 +144,7 @@ export async function syncAllPlaidItems(userId) {
       const result = await syncTransactionsForItem(item);
       results.push({ itemId: item.item_id, ...result });
     } catch (err) {
+      notifyAdmin({ category: "integration", title: "Plaid sync failed", body: `Item ${item.item_id}: ${err.message}`, key: `plaid:${err.message.slice(0, 60)}` });
       results.push({ itemId: item.item_id, error: err.message });
     }
   }

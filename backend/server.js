@@ -3,6 +3,11 @@ import express from "express";
 import cors from "cors";
 import "./db/init.js"; // runs schema setup and migrations on boot
 import { pruneOldEvents } from "./services/security.js";
+import { captureConsoleErrors, trackServerErrors, pruneOpsEvents } from "./services/ops.js";
+
+// From here on, anything logged with console.error is also emailed to the
+// admin (batched and de-duplicated) — see services/ops.js.
+captureConsoleErrors();
 import { authRouter } from "./routes/auth.js";
 import { requireAuth } from "./middleware/auth.js";
 import { transactionsRouter } from "./routes/transactions.js";
@@ -27,6 +32,8 @@ const app = express();
 app.set("trust proxy", 1);
 app.use(cors());
 app.use(express.json());
+// Any 5xx response becomes an admin alert.
+app.use(trackServerErrors);
 
 app.get("/api/health", (req, res) => res.json({ ok: true }));
 
@@ -48,8 +55,9 @@ app.use("/api/push", requireAuth, pushRouter);
 app.use("/api/jobs", jobsRouter);
 
 // Drop security log entries older than 90 days, now and once a day.
-pruneOldEvents().catch((err) => console.error("Security log prune failed:", err.message));
-setInterval(() => pruneOldEvents().catch(() => {}), 24 * 60 * 60 * 1000);
+const prune = () => Promise.all([pruneOldEvents(), pruneOpsEvents()]).catch((err) => console.error("Log prune failed:", err.message));
+prune();
+setInterval(prune, 24 * 60 * 60 * 1000);
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {

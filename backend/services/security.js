@@ -1,5 +1,6 @@
 import { db } from "../db/init.js";
 import { sendToUser } from "./push.js";
+import { notifyAdmin, maskPII } from "./ops.js";
 
 // --- Security monitoring ------------------------------------------------------
 // Two jobs:
@@ -144,8 +145,12 @@ export function lockMessage(minutes) {
 // --- Admin alerts -------------------------------------------------------------------------
 const lastAlert = new Map();
 
-// Fire-and-forget push to the admin account; never blocks or fails a request.
+// Emails the admin (via ops.js, which batches and de-duplicates) and, if the
+// admin also has a Prudence Wallet account with notifications on, pushes to
+// it too. Fire-and-forget: never blocks or fails a request.
 export function alertAdmin(subject, title, body) {
+  notifyAdmin({ category: "security", title: title.replace(/^Security: /, ""), body, key: `sec:${subject}` });
+
   const adminEmail = normalizeEmail(process.env.ADMIN_EMAIL);
   if (!adminEmail) return;
   const last = lastAlert.get(subject) || 0;
@@ -154,6 +159,7 @@ export function alertAdmin(subject, title, body) {
 
   (async () => {
     const admin = await db.get("SELECT id FROM users WHERE email = ?", [adminEmail]);
-    if (admin) await sendToUser(admin.id, null, { title, body, tag: `security-${subject}`, url: "/" });
+    // Push messages pass through the browser's push service, so mask here too.
+    if (admin) await sendToUser(admin.id, null, { title, body: maskPII(body), tag: `security-${subject}`, url: "/" });
   })().catch((err) => console.error("Security alert failed:", err.message));
 }

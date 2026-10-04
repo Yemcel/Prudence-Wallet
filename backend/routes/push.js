@@ -10,6 +10,7 @@ import {
   runScheduledJob,
 } from "../services/push.js";
 import { logEvent, clientIp, alertAdmin } from "../services/security.js";
+import { notifyAdmin, sendDigest } from "../services/ops.js";
 
 // --- Signed-in user's notification settings (mounted behind requireAuth) ---
 export const pushRouter = Router();
@@ -84,7 +85,7 @@ function secretMatches(given) {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
-// POST /api/jobs/daily-reminder  |  POST /api/jobs/weekly-summary
+// POST /api/jobs/daily-reminder | /api/jobs/weekly-summary | /api/jobs/daily-digest
 jobsRouter.post("/:job", async (req, res) => {
   const header = req.headers.authorization || "";
   const token = header.startsWith("Bearer ") ? header.slice(7).trim() : null;
@@ -96,11 +97,19 @@ jobsRouter.post("/:job", async (req, res) => {
     return res.status(401).json({ error: "Not authorised" });
   }
 
+  const job = req.params.job;
   try {
-    const result = await runScheduledJob(req.params.job);
-    console.log("Scheduled job:", JSON.stringify(result));
+    const result = job === "daily-digest" ? await sendDigest() : await runScheduledJob(job);
+    console.log("Scheduled job:", job, JSON.stringify(result));
+    const summary =
+      job === "daily-digest"
+        ? `daily-digest: ${result.sent ? "sent" : `not sent (${result.skipped})`}`
+        : `${job}: ${result.sent} sent to ${result.users} user(s)${result.skipped ? ` (${result.skipped})` : ""}`;
+    // Recorded for tomorrow's digest; only a failure is emailed straight away.
+    notifyAdmin({ category: "job", title: summary, email: false });
     res.json(result);
   } catch (err) {
+    notifyAdmin({ category: "job", title: `${job} failed`, body: err.message, key: `job:${job}` });
     res.status(400).json({ error: err.message });
   }
 });

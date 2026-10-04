@@ -7,6 +7,7 @@
 #
 # Times are UTC. The UK is UTC+1 in summer and UTC+0 in winter, so these land
 # at 20:00/19:00 (daily) and 19:00/18:00 on Sundays (weekly), London time.
+# The admin digest goes at 07:00/06:00 London time.
 # GitHub may start scheduled runs a few minutes late.
 
 name: Notifications
@@ -15,6 +16,7 @@ on:
   schedule:
     - cron: "0 19 * * *" # daily evening reminder
     - cron: "0 18 * * 0" # Sunday weekly summary
+    - cron: "0 6 * * *" # admin daily digest email
   workflow_dispatch:
     inputs:
       job:
@@ -25,6 +27,7 @@ on:
         options:
           - daily-reminder
           - weekly-summary
+          - daily-digest
 
 jobs:
   send:
@@ -37,6 +40,8 @@ jobs:
             echo "job=${{ inputs.job }}" >> "$GITHUB_OUTPUT"
           elif [ "${{ github.event.schedule }}" = "0 18 * * 0" ]; then
             echo "job=weekly-summary" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "0 6 * * *" ]; then
+            echo "job=daily-digest" >> "$GITHUB_OUTPUT"
           else
             echo "job=daily-reminder" >> "$GITHUB_OUTPUT"
           fi
