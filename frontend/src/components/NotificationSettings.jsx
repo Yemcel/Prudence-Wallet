@@ -18,6 +18,14 @@ function urlBase64ToUint8Array(base64) {
   return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
 }
 
+function withTimeout(promise, ms, message) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(message)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 function pushSupported() {
   return typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
 }
@@ -63,15 +71,26 @@ export default function NotificationSettings() {
       const result = await Notification.requestPermission();
       setPermission(result);
       if (result !== "granted") return;
-      const reg = await navigator.serviceWorker.ready;
+      // Each step is timed out: some browsers (e.g. DuckDuckGo, some
+      // privacy-hardened setups) never answer instead of failing, which
+      // would leave the button stuck on "Turning on…" forever.
+      const reg = await withTimeout(
+        navigator.serviceWorker.ready,
+        10000,
+        "The app's background worker isn't running in this browser. Reload the page and try again."
+      );
       const sub =
         (await reg.pushManager.getSubscription()) ||
-        (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(config.publicKey) }));
+        (await withTimeout(
+          reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(config.publicKey) }),
+          15000,
+          "This browser didn't respond to the notification request — it may not support push notifications. Try Chrome or Edge."
+        ));
       await api.subscribePush(sub.toJSON());
       setSubscription(sub);
       setMessage({ text: "Notifications are on for this device." });
     } catch (e) {
-      setMessage({ text: `Couldn't turn notifications on: ${e.message}`, error: true });
+      setMessage({ text: e.message, error: true });
     } finally {
       setBusy(false);
     }
