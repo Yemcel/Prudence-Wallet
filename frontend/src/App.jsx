@@ -18,7 +18,7 @@ import ConnectAccountsModal from "./components/ConnectAccountsModal.jsx";
 import DeleteAccountModal from "./components/DeleteAccountModal.jsx";
 import NudgeBanner from "./components/NudgeBanner.jsx";
 import HomeCurrencySelector from "./components/HomeCurrencySelector.jsx";
-import NotificationSettings from "./components/NotificationSettings.jsx";
+import ProfileMenu from "./components/ProfileMenu.jsx";
 
 export default function App() {
   const [authChecked, setAuthChecked] = useState(false);
@@ -145,16 +145,16 @@ export default function App() {
 
   return (
     <div style={styles.page}>
-      <header style={{ ...styles.header, display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 12 }}>
-        <div>
-          <div style={styles.eyebrow}>Ledger</div>
-          <h1 style={styles.title}>Every source, one honest picture</h1>
+      <header style={styles.header}>
+        {/* Top bar: profile menu pinned to the top-right on every screen size */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 6 }}>
+          <div style={{ ...styles.eyebrow, marginBottom: 0 }}>Ledger</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <HomeCurrencySelector homeCurrency={homeCurrency} onChanged={(c) => { setHomeCurrency(c); refresh(); }} />
+            <ProfileMenu email={user.email} onSignOut={handleLogout} onDeleteAccount={() => setDeleteOpen(true)} />
+          </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <HomeCurrencySelector homeCurrency={homeCurrency} onChanged={(c) => { setHomeCurrency(c); refresh(); }} />
-          <button style={styles.modalClose} onClick={handleLogout}>Sign out</button>
-          <button style={{ ...styles.modalClose, color: "#A83B32" }} onClick={() => setDeleteOpen(true)}>Delete account</button>
-        </div>
+        <h1 style={styles.title}>Every source, one honest picture</h1>
       </header>
 
       {loadError && (
@@ -176,7 +176,6 @@ export default function App() {
       <SpectrumBar summary={summary} />
       <SavingsProjection summary={summary} />
       <LearnedRules rules={rules} />
-      <NotificationSettings />
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
         <div style={styles.sectionHeading}>Connections</div>

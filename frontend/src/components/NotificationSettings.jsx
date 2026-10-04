@@ -38,7 +38,7 @@ function isIosBrowserTab() {
   return ios && !installed;
 }
 
-export default function NotificationSettings() {
+export default function NotificationSettings({ embedded = false }) {
   const [config, setConfig] = useState(null); // { publicKey, prefs }
   const [subscription, setSubscription] = useState(null);
   const [permission, setPermission] = useState(pushSupported() ? Notification.permission : "unsupported");
@@ -226,6 +226,18 @@ export default function NotificationSettings() {
       : subscription
       ? { text: `On · ${onCount} of ${KINDS.length}`, color: "#3F6E5B" }
       : { text: "Off", color: "#8B95A5" };
+
+  // Inside the profile menu: just the controls, no heading or card of its own.
+  if (embedded) {
+    return (
+      <div>
+        {body}
+        {message && (
+          <div style={{ fontSize: 12.5, marginTop: 12, color: message.error ? "#A83B32" : "#3F6E5B" }}>{message.text}</div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <section style={{ marginBottom: 24 }}>
