@@ -250,7 +250,20 @@ export default function NotificationSettings() {
       >
         <span style={{ ...styles.sectionHeading, marginBottom: 0, flex: 1 }}>Notifications</span>
         <span style={{ fontSize: 12, color: status.color }}>{status.text}</span>
-        <span style={{ fontSize: 12, color: "#8B95A5", width: 12, textAlign: "center" }}>{open ? "▾" : "▸"}</span>
+        <span
+          style={{
+            fontSize: 12,
+            fontWeight: 500,
+            color: "#1C2430",
+            border: "1px solid #D6D0C2",
+            borderRadius: 999,
+            padding: "4px 12px",
+            background: "#FFFFFF",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {open ? "Collapse" : "Expand"}
+        </span>
       </button>
       {open && (
         <div style={styles.card}>
