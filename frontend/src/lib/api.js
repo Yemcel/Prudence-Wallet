@@ -105,6 +105,12 @@ export const api = {
   getNudges: () => request("/api/nudges"),
   dismissNudge: (id) => request(`/api/nudges/${id}/dismiss`, { method: "PATCH" }),
 
+  getPushConfig: () => request("/api/push/config"),
+  subscribePush: (subscription) => request("/api/push/subscribe", { method: "POST", body: JSON.stringify({ subscription }) }),
+  unsubscribePush: (endpoint) => request("/api/push/unsubscribe", { method: "POST", body: JSON.stringify({ endpoint }) }),
+  updatePushPrefs: (prefs) => request("/api/push/prefs", { method: "PUT", body: JSON.stringify(prefs) }),
+  sendTestPush: () => request("/api/push/test", { method: "POST" }),
+
   getSettings: () => request("/api/settings"),
   updateSettings: (payload) => request("/api/settings", { method: "PUT", body: JSON.stringify(payload) }),
 };

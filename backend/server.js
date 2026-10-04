@@ -11,6 +11,7 @@ import { plaidRouter } from "./routes/plaid.js";
 import { paypalRouter } from "./routes/paypal.js";
 import { nudgesRouter } from "./routes/nudges.js";
 import { settingsRouter } from "./routes/settings.js";
+import { pushRouter, jobsRouter } from "./routes/push.js";
 
 // Safety net: with no listener here, an unhandled promise rejection
 // anywhere in the app (a route that forgot a try/catch, say) crashes the
@@ -38,6 +39,10 @@ app.use("/api/plaid", plaidRouter);
 app.use("/api/paypal", requireAuth, paypalRouter);
 app.use("/api/nudges", requireAuth, nudgesRouter);
 app.use("/api/settings", requireAuth, settingsRouter);
+app.use("/api/push", requireAuth, pushRouter);
+// Called by the notification schedule (.github/workflows/notifications.yml),
+// authorised with JOBS_SECRET rather than a user token.
+app.use("/api/jobs", jobsRouter);
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {

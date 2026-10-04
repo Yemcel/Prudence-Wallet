@@ -36,6 +36,9 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         skipWaiting: true,
+        // Adds push notification handling (public/push-sw.js) to the
+        // generated service worker.
+        importScripts: ["push-sw.js"],
       },
     }),
   ],

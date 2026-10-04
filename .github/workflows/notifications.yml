@@ -1,0 +1,54 @@
+# Wakes the backend on a schedule to send the evening reminder and the
+# weekly summary push notifications. Render's free tier sleeps when idle, so
+# the backend can't run timers of its own.
+#
+# Needs one repository secret: JOBS_SECRET (same value as the backend's
+# JOBS_SECRET environment variable on Render).
+#
+# Times are UTC. The UK is UTC+1 in summer and UTC+0 in winter, so these land
+# at 20:00/19:00 (daily) and 19:00/18:00 on Sundays (weekly), London time.
+# GitHub may start scheduled runs a few minutes late.
+
+name: Notifications
+
+on:
+  schedule:
+    - cron: "0 19 * * *" # daily evening reminder
+    - cron: "0 18 * * 0" # Sunday weekly summary
+  workflow_dispatch:
+    inputs:
+      job:
+        description: "Which notification job to run now"
+        required: true
+        default: daily-reminder
+        type: choice
+        options:
+          - daily-reminder
+          - weekly-summary
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pick the job
+        id: pick
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "job=${{ inputs.job }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "0 18 * * 0" ]; then
+            echo "job=weekly-summary" >> "$GITHUB_OUTPUT"
+          else
+            echo "job=daily-reminder" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Call the backend
+        env:
+          JOBS_SECRET: ${{ secrets.JOBS_SECRET }}
+          API_URL: https://prudence-wallet.onrender.com
+        run: |
+          # The first request may take up to a minute while Render wakes the
+          # backend, hence the long timeout and retries.
+          curl --fail-with-body --silent --show-error \
+            --max-time 120 --retry 3 --retry-delay 20 --retry-all-errors \
+            -X POST "$API_URL/api/jobs/${{ steps.pick.outputs.job }}" \
+            -H "Authorization: Bearer $JOBS_SECRET"

@@ -5,6 +5,7 @@ import { api, getToken, AuthError } from "./lib/api.js";
 import AuthScreen from "./components/AuthScreen.jsx";
 import CoverageCard from "./components/CoverageCard.jsx";
 import SpendingDonut from "./components/SpendingDonut.jsx";
+import WeeklyView from "./components/WeeklyView.jsx";
 import PendingList from "./components/PendingList.jsx";
 import SpectrumBar from "./components/SpectrumBar.jsx";
 import SavingsProjection from "./components/SavingsProjection.jsx";
@@ -17,6 +18,7 @@ import ConnectAccountsModal from "./components/ConnectAccountsModal.jsx";
 import DeleteAccountModal from "./components/DeleteAccountModal.jsx";
 import NudgeBanner from "./components/NudgeBanner.jsx";
 import HomeCurrencySelector from "./components/HomeCurrencySelector.jsx";
+import NotificationSettings from "./components/NotificationSettings.jsx";
 
 export default function App() {
   const [authChecked, setAuthChecked] = useState(false);
@@ -168,11 +170,13 @@ export default function App() {
       <NudgeBanner nudges={nudges} onDismiss={handleDismissNudge} />
 
       <CoverageCard summary={summary} onAddManual={() => setAddOpen(true)} />
+      <WeeklyView ranked={ranked} pending={pending} homeCurrency={homeCurrency} />
       <SpendingDonut summary={summary} />
       <PendingList pending={pending} onOpenCoach={setActiveTx} />
       <SpectrumBar summary={summary} />
       <SavingsProjection summary={summary} />
       <LearnedRules rules={rules} />
+      <NotificationSettings />
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
         <div style={styles.sectionHeading}>Connections</div>

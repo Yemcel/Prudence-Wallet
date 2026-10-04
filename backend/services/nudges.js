@@ -1,4 +1,5 @@
 import { db } from "../db/init.js";
+import { notifyInBackground } from "./push.js";
 
 // --- Honesty check before you build on this -------------------------------
 // This is "near-real-time," not literal pre-purchase interception. It fires
@@ -74,6 +75,11 @@ export async function checkAndCreateNudge(tx) {
   )} total. Still feel worth it, or is this one worth reconsidering?`;
 
   await db.run("INSERT INTO nudges (transaction_id, message, user_id) VALUES (?, ?, ?)", [tx.id, message, tx.user_id]);
+
+  // Also send it to the user's phone, in case the app isn't open — that's
+  // the moment a nudge is most useful. Never holds up or fails the caller.
+  notifyInBackground(tx.user_id, "nudges", { title: "Worth a second look?", body: message, tag: `nudge-${tx.id}`, url: "/" });
+
   return message;
 }
 

@@ -183,6 +183,32 @@ for (const table of ["accounts", "transactions", "plaid_items", "paypal_connecti
 await addColumnIfMissing("paypal_connections", "client_id TEXT");
 await addColumnIfMissing("paypal_connections", "client_secret_enc TEXT");
 
+// --- Push notifications ----------------------------------------------
+// One row per device/browser that allowed notifications (a user can have
+// several: phone, laptop...). The endpoint is the address the browser
+// vendor gave us for that device; p256dh/auth are its encryption keys.
+// notification_prefs holds which of the three kinds a user wants — absent
+// row = all on.
+await client.batch(
+  [
+    `CREATE TABLE IF NOT EXISTS push_subscriptions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL REFERENCES users(id),
+      endpoint TEXT NOT NULL UNIQUE,
+      p256dh TEXT NOT NULL,
+      auth TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )`,
+    `CREATE TABLE IF NOT EXISTS notification_prefs (
+      user_id TEXT PRIMARY KEY REFERENCES users(id),
+      nudges INTEGER NOT NULL DEFAULT 1,
+      weekly INTEGER NOT NULL DEFAULT 1,
+      daily INTEGER NOT NULL DEFAULT 1
+    )`,
+  ],
+  "write"
+);
+
 // --- Demo data removal ------------------------------------------------
 // Earlier builds seeded a sample wallet (a fake Chase card, a demo PayPal
 // row and six sample transactions), and the first person to sign up
@@ -280,6 +306,8 @@ export async function claimOrphanedDataForFirstUser(userId) {
 export async function deleteAllUserData(userId) {
   await client.batch(
     [
+      { sql: "DELETE FROM push_subscriptions WHERE user_id = ?", args: [userId] },
+      { sql: "DELETE FROM notification_prefs WHERE user_id = ?", args: [userId] },
       { sql: "DELETE FROM nudges WHERE user_id = ?", args: [userId] },
       { sql: "DELETE FROM rank_overrides WHERE user_id = ?", args: [userId] },
       { sql: "DELETE FROM transactions WHERE user_id = ?", args: [userId] },
