@@ -19,6 +19,7 @@ import DeleteAccountModal from "./components/DeleteAccountModal.jsx";
 import NudgeBanner from "./components/NudgeBanner.jsx";
 import HomeCurrencySelector from "./components/HomeCurrencySelector.jsx";
 import ProfileMenu from "./components/ProfileMenu.jsx";
+import Footer from "./components/Footer.jsx";
 
 export default function App() {
   const [authChecked, setAuthChecked] = useState(false);
@@ -184,6 +185,8 @@ export default function App() {
       <ConnectionsPanel accounts={accounts} onRemoved={refresh} />
 
       <TransactionList transactions={ranked} onOverrideRank={handleOverrideRank} />
+
+      <Footer />
 
       {activeTx && <CoachModal transaction={activeTx} onClose={() => setActiveTx(null)} onResolved={handleResolved} />}
       {addOpen && <AddManualModal onClose={() => setAddOpen(false)} onAdded={handleManualAdded} />}
