@@ -18,6 +18,8 @@ function urlBase64ToUint8Array(base64) {
   return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
 }
 
+const OPEN_KEY = "prudence_notifications_open";
+
 function withTimeout(promise, ms, message) {
   let timer;
   const timeout = new Promise((_, reject) => {
@@ -42,6 +44,24 @@ export default function NotificationSettings() {
   const [permission, setPermission] = useState(pushSupported() ? Notification.permission : "unsupported");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState(null); // { text, error }
+  // Collapsed by default; the choice is remembered on this device.
+  const [open, setOpen] = useState(() => {
+    try {
+      return localStorage.getItem(OPEN_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const toggleOpen = () => {
+    setOpen((o) => {
+      try {
+        localStorage.setItem(OPEN_KEY, o ? "0" : "1");
+      } catch {
+        // storage unavailable (private mode) — just won't be remembered
+      }
+      return !o;
+    });
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -198,15 +218,48 @@ export default function NotificationSettings() {
     );
   }
 
+  // One-word status shown next to the heading, so it's useful even collapsed.
+  const onCount = config ? KINDS.filter((k) => config.prefs[k.key]).length : 0;
+  const status =
+    permission === "denied"
+      ? { text: "Blocked", color: "#A83B32" }
+      : subscription
+      ? { text: `On · ${onCount} of ${KINDS.length}`, color: "#3F6E5B" }
+      : { text: "Off", color: "#8B95A5" };
+
   return (
     <section style={{ marginBottom: 24 }}>
-      <div style={styles.sectionHeading}>Notifications</div>
-      <div style={styles.card}>
-        {body}
-        {message && (
-          <div style={{ fontSize: 12.5, marginTop: 12, color: message.error ? "#A83B32" : "#3F6E5B" }}>{message.text}</div>
-        )}
-      </div>
+      <button
+        type="button"
+        onClick={toggleOpen}
+        aria-expanded={open}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          width: "100%",
+          background: "none",
+          border: "none",
+          padding: 0,
+          marginBottom: open ? 12 : 0,
+          font: "inherit",
+          color: "inherit",
+          cursor: "pointer",
+          textAlign: "left",
+        }}
+      >
+        <span style={{ ...styles.sectionHeading, marginBottom: 0, flex: 1 }}>Notifications</span>
+        <span style={{ fontSize: 12, color: status.color }}>{status.text}</span>
+        <span style={{ fontSize: 12, color: "#8B95A5", width: 12, textAlign: "center" }}>{open ? "▾" : "▸"}</span>
+      </button>
+      {open && (
+        <div style={styles.card}>
+          {body}
+          {message && (
+            <div style={{ fontSize: 12.5, marginTop: 12, color: message.error ? "#A83B32" : "#3F6E5B" }}>{message.text}</div>
+          )}
+        </div>
+      )}
     </section>
   );
 }
