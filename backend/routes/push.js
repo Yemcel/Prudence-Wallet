@@ -9,6 +9,7 @@ import {
   sendToUser,
   runScheduledJob,
 } from "../services/push.js";
+import { logEvent, clientIp, alertAdmin } from "../services/security.js";
 
 // --- Signed-in user's notification settings (mounted behind requireAuth) ---
 export const pushRouter = Router();
@@ -87,7 +88,13 @@ function secretMatches(given) {
 jobsRouter.post("/:job", async (req, res) => {
   const header = req.headers.authorization || "";
   const token = header.startsWith("Bearer ") ? header.slice(7).trim() : null;
-  if (!secretMatches(token)) return res.status(401).json({ error: "Not authorised" });
+  if (!secretMatches(token)) {
+    // Only the GitHub schedule should ever call this; anything else is worth knowing about.
+    const ip = clientIp(req);
+    await logEvent("jobs_auth_failed", { ip, detail: `job: ${req.params.job}` });
+    alertAdmin(`jobs:${ip}`, "Security: rejected job call", `Someone called /api/jobs/${req.params.job} from ${ip} without the right secret.`);
+    return res.status(401).json({ error: "Not authorised" });
+  }
 
   try {
     const result = await runScheduledJob(req.params.job);

@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import "./db/init.js"; // runs schema setup and migrations on boot
+import { pruneOldEvents } from "./services/security.js";
 import { authRouter } from "./routes/auth.js";
 import { requireAuth } from "./middleware/auth.js";
 import { transactionsRouter } from "./routes/transactions.js";
@@ -22,6 +23,8 @@ process.on("unhandledRejection", (err) => {
 });
 
 const app = express();
+// Behind Render's proxy: lets req.ip be the visitor's address, not the proxy's.
+app.set("trust proxy", 1);
 app.use(cors());
 app.use(express.json());
 
@@ -43,6 +46,10 @@ app.use("/api/push", requireAuth, pushRouter);
 // Called by the notification schedule (.github/workflows/notifications.yml),
 // authorised with JOBS_SECRET rather than a user token.
 app.use("/api/jobs", jobsRouter);
+
+// Drop security log entries older than 90 days, now and once a day.
+pruneOldEvents().catch((err) => console.error("Security log prune failed:", err.message));
+setInterval(() => pruneOldEvents().catch(() => {}), 24 * 60 * 60 * 1000);
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {

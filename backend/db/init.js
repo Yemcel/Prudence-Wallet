@@ -199,6 +199,24 @@ await client.batch(
       auth TEXT NOT NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     )`,
+    // Security monitoring (services/security.js): an event log kept 90 days,
+    // and per-email / per-address counters that throttle sign-in attempts.
+    `CREATE TABLE IF NOT EXISTS security_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      event TEXT NOT NULL,
+      user_id TEXT,
+      email TEXT,
+      ip TEXT,
+      detail TEXT
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_security_events_created ON security_events (created_at)`,
+    `CREATE TABLE IF NOT EXISTS auth_throttle (
+      key TEXT PRIMARY KEY,
+      failures INTEGER NOT NULL DEFAULT 0,
+      window_start TEXT NOT NULL,
+      locked_until TEXT
+    )`,
     `CREATE TABLE IF NOT EXISTS notification_prefs (
       user_id TEXT PRIMARY KEY REFERENCES users(id),
       nudges INTEGER NOT NULL DEFAULT 1,

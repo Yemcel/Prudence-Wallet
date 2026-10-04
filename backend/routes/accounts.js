@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db } from "../db/init.js";
 import { plaidClient } from "../services/plaid.js";
+import { logEvent, clientIp } from "../services/security.js";
 
 export const accountsRouter = Router();
 
@@ -53,6 +54,7 @@ accountsRouter.delete("/:id", async (req, res) => {
       { sql: "DELETE FROM accounts WHERE id = ? AND user_id = ?", args },
     ]);
 
+    await logEvent("connection_removed", { userId: req.userId, ip: clientIp(req), detail: `${account.tier}: ${account.name}` });
     res.json({ removed: account.id });
   } catch (err) {
     res.status(500).json({ error: err.message });
