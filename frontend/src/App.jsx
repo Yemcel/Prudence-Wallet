@@ -182,7 +182,7 @@ export default function App() {
         <div style={styles.sectionHeading}>Connections</div>
         <button style={styles.addBtn} onClick={() => setConnectOpen(true)}>+ Connect account</button>
       </div>
-      <ConnectionsPanel accounts={accounts} />
+      <ConnectionsPanel accounts={accounts} onRemoved={refresh} />
 
       <TransactionList transactions={ranked} onOverrideRank={handleOverrideRank} />
 

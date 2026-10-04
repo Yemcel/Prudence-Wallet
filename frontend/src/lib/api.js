@@ -80,6 +80,7 @@ export const api = {
   getPending: () => request("/api/transactions/pending"),
   getSummary: () => request("/api/transactions/summary"),
   getAccounts: () => request("/api/accounts"),
+  removeAccount: (id) => request(`/api/accounts/${encodeURIComponent(id)}`, { method: "DELETE" }),
   getLearnedRules: () => request("/api/coach/rules"),
 
   addManualTransaction: (payload) =>
