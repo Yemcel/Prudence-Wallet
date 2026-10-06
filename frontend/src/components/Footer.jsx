@@ -65,6 +65,10 @@ export default function Footer() {
         © {new Date().getFullYear()} Prudence Wallet. All rights reserved.
       </div>
       <div style={{ marginTop: 6, fontSize: 11, color: "#8B95A5", textAlign: "center" }}>
+        <a href="/about.html" target="_blank" rel="noopener noreferrer" style={{ color: "inherit" }}>
+          About
+        </a>
+        {" · "}
         <a href="/terms.html" target="_blank" rel="noopener noreferrer" style={{ color: "inherit" }}>
           Terms of Use
         </a>
