@@ -35,7 +35,7 @@ export default function AddManualModal({ onClose, onAdded }) {
             {saving ? "Saving…" : "Add & continue"}
           </button>
         </div>
-        <button style={styles.modalClose} onClick={onClose}>
+        <button type="button" style={styles.modalCancel} onClick={onClose}>
           Cancel
         </button>
       </div>

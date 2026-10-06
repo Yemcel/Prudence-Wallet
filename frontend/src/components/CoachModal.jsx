@@ -83,7 +83,7 @@ export default function CoachModal({ transaction, onClose, onResolved }) {
             Send
           </button>
         </div>
-        <button style={styles.modalClose} onClick={onClose}>
+        <button type="button" style={styles.modalCancel} onClick={onClose}>
           Skip for now
         </button>
       </div>

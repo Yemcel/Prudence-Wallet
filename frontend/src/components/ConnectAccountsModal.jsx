@@ -147,7 +147,7 @@ export default function ConnectAccountsModal({ onClose, onConnected }) {
           </button>
         )}
 
-        <button style={{ ...styles.modalClose, marginTop: 16 }} onClick={onClose}>
+        <button type="button" style={styles.modalCancel} onClick={onClose}>
           Close
         </button>
       </div>

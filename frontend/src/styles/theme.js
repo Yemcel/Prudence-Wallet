@@ -62,8 +62,13 @@ export const styles = {
   rowAmount: { fontFamily: "'JetBrains Mono', monospace", fontSize: 13.5, width: 68, textAlign: "right" },
   rankChip: { fontSize: 11, fontWeight: 500, border: "1px solid", borderRadius: 999, padding: "5px 9px", whiteSpace: "nowrap", cursor: "pointer" },
 
-  overlay: { position: "fixed", inset: 0, background: "rgba(28,36,48,0.5)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 50 },
-  modal: { background: "#F6F4EF", width: "100%", maxWidth: 480, borderRadius: "18px 18px 0 0", padding: "20px 20px 24px" },
+  // 100dvh (not inset: 0) so the sheet sits above mobile browser toolbars
+  // instead of partly behind them.
+  overlay: { position: "fixed", top: 0, left: 0, right: 0, height: "100dvh", background: "rgba(28,36,48,0.5)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 50 },
+  modal: { background: "#F6F4EF", width: "100%", maxWidth: 480, maxHeight: "90dvh", overflowY: "auto", borderRadius: "18px 18px 0 0", padding: "20px 20px calc(20px + env(safe-area-inset-bottom, 0px))" },
+  // A real, thumb-sized Cancel button (the old text link was too small to
+  // hit reliably on phones, especially while the keyboard was closing).
+  modalCancel: { display: "block", width: "100%", minHeight: 46, marginTop: 10, padding: "12px 16px", background: "transparent", border: "1px solid #D6D0C2", borderRadius: 12, color: "#4B5563", fontSize: 15, fontFamily: "inherit", cursor: "pointer" },
   modalHeader: { display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 14 },
   modalMerchant: { fontFamily: "'Fraunces', serif", fontSize: 18, fontWeight: 500 },
   modalAmount: { fontFamily: "'JetBrains Mono', monospace", fontSize: 15, color: "#6B7280" },

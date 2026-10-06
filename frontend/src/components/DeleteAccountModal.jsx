@@ -46,7 +46,7 @@ export default function DeleteAccountModal({ onClose, onDeleted }) {
             {busy ? "Deleting…" : "Permanently delete my account"}
           </button>
         </div>
-        <button style={styles.modalClose} onClick={onClose}>
+        <button type="button" style={styles.modalCancel} onClick={onClose}>
           Cancel
         </button>
       </div>
