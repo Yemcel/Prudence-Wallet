@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { styles } from "../styles/theme.js";
-import { currency } from "../constants/ranks.js";
+import { currency, currencyCompact } from "../constants/ranks.js";
 
 const LABELS = [
   { key: "1m", label: "1 month", months: 1 },
@@ -54,7 +54,9 @@ export default function SavingsProjection({ summary }) {
             {LABELS.map((l) => (
               <div key={l.key} style={styles.projCard}>
                 <div style={styles.projLabel}>{l.label}</div>
-                <div style={styles.projValue}>{currency(adjustedMonthly * l.months, summary.homeCurrency)}</div>
+                <div style={styles.projValue} title={currency(adjustedMonthly * l.months, summary.homeCurrency)}>
+                  {currencyCompact(adjustedMonthly * l.months, summary.homeCurrency)}
+                </div>
               </div>
             ))}
           </div>

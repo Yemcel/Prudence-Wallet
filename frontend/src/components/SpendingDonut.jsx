@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { PieChart, Pie, Cell, Tooltip } from "recharts";
 import { styles } from "../styles/theme.js";
-import { RANKS, currency } from "../constants/ranks.js";
+import { RANKS, currency, currencyCompact } from "../constants/ranks.js";
 
 export default function SpendingDonut({ summary }) {
   const [activeSlice, setActiveSlice] = useState(null);
@@ -46,7 +46,8 @@ export default function SpendingDonut({ summary }) {
             />
           </PieChart>
           <div style={styles.sliceCenter}>
-            <div style={styles.sliceCenterAmt}>{currency(activeSlice ? activeSlice.value : summary.total, summary.homeCurrency)}</div>
+            {/* Compact so large totals (e.g. in naira) fit inside the ring; the tooltip shows the exact amount. */}
+            <div style={styles.sliceCenterAmt}>{currencyCompact(activeSlice ? activeSlice.value : summary.total, summary.homeCurrency)}</div>
             <div style={styles.sliceCenterLabel}>{activeSlice ? activeSlice.name : "Total"}</div>
           </div>
         </div>

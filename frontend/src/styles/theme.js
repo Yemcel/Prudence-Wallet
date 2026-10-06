@@ -26,7 +26,7 @@ export const styles = {
   sliceRow: { display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" },
   sliceChartWrap: { position: "relative", width: 168, height: 168, flexShrink: 0 },
   sliceCenter: { position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", pointerEvents: "none" },
-  sliceCenterAmt: { fontFamily: "'JetBrains Mono', monospace", fontSize: 15, fontWeight: 500 },
+  sliceCenterAmt: { fontFamily: "'JetBrains Mono', monospace", fontSize: 15, fontWeight: 500, maxWidth: 110, textAlign: "center", overflowWrap: "anywhere" },
   sliceCenterLabel: { fontSize: 10.5, color: "#8B95A5", marginTop: 2, textAlign: "center", maxWidth: 90 },
   sliceLegend: { flex: 1, minWidth: 160, display: "flex", flexDirection: "column", gap: 8 },
   sliceLegendRow: { display: "flex", alignItems: "center", gap: 8, fontSize: 13 },
@@ -34,10 +34,11 @@ export const styles = {
   sliceLegendPct: { fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: "#6B7280" },
   dot: { width: 8, height: 8, borderRadius: "50%", display: "inline-block", flexShrink: 0 },
 
-  projGrid: { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 },
-  projCard: { background: "#1C2430", color: "#F6F4EF", borderRadius: 12, padding: "14px 10px", textAlign: "center" },
+  // Four across on wide screens, two by two on phones.
+  projGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 10 },
+  projCard: { background: "#1C2430", color: "#F6F4EF", borderRadius: 12, padding: "14px 10px", textAlign: "center", minWidth: 0 },
   projLabel: { fontSize: 10.5, letterSpacing: "0.06em", textTransform: "uppercase", color: "#A8B0BE", marginBottom: 6 },
-  projValue: { fontFamily: "'JetBrains Mono', monospace", fontSize: 16, fontWeight: 500, color: "#C08A2E" },
+  projValue: { fontFamily: "'JetBrains Mono', monospace", fontSize: 17, fontWeight: 500, color: "#C08A2E", overflowWrap: "anywhere" },
   cutToggleRow: { display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 12 },
   cutToggleLabel: { fontSize: 12, color: "#6B7280" },
   cutToggleGroup: { display: "flex", gap: 6 },

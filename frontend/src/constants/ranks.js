@@ -19,3 +19,11 @@ export const TIERS = {
 export function currency(n, code = "USD") {
   return Number(n).toLocaleString("en-US", { style: "currency", currency: code });
 }
+
+// Short form for tight spaces (chart centres, small cards): 988.7K, 11.9M.
+// Amounts under 10,000 are shown in full.
+export function currencyCompact(n, code = "USD") {
+  const value = Number(n);
+  if (Math.abs(value) < 10000) return currency(value, code);
+  return value.toLocaleString("en-US", { style: "currency", currency: code, notation: "compact", maximumFractionDigits: 1 });
+}
