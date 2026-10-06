@@ -65,6 +65,10 @@ export default function Footer() {
         © {new Date().getFullYear()} Prudence Wallet. All rights reserved.
       </div>
       <div style={{ marginTop: 6, fontSize: 11, color: "#8B95A5", textAlign: "center" }}>
+        <a href="/terms.html" target="_blank" rel="noopener noreferrer" style={{ color: "inherit" }}>
+          Terms of Use
+        </a>
+        {" · "}
         <a href="https://www.exchangerate-api.com" target="_blank" rel="noopener noreferrer" style={{ color: "inherit" }}>
           Rates by Exchange Rate API
         </a>
