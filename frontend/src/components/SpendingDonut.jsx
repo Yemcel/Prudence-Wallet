@@ -6,12 +6,14 @@ import { RANKS, currency, currencyCompact } from "../constants/ranks.js";
 export default function SpendingDonut({ summary }) {
   const [activeSlice, setActiveSlice] = useState(null);
 
-  const sliceData = useMemo(() => {
+  // Every tier, in order — the legend always lists all seven so the scale is
+  // visible even when a tier has no spending yet; the ring only draws tiers
+  // that have some.
+  const allTiers = useMemo(() => {
     if (!summary) return [];
-    return RANKS.map((r) => ({ key: r.key, name: r.label, value: summary.byRank[r.key] || 0, color: r.color })).filter(
-      (d) => d.value > 0
-    );
+    return RANKS.map((r) => ({ key: r.key, name: r.label, value: summary.byRank[r.key] || 0, color: r.color }));
   }, [summary]);
+  const sliceData = useMemo(() => allTiers.filter((d) => d.value > 0), [allTiers]);
 
   if (!summary || sliceData.length === 0) return null;
 
@@ -52,13 +54,16 @@ export default function SpendingDonut({ summary }) {
           </div>
         </div>
         <div style={styles.sliceLegend}>
-          {sliceData.map((d) => (
-            <div key={d.key} style={styles.sliceLegendRow}>
-              <span style={{ ...styles.dot, background: d.color }} />
-              <span style={styles.sliceLegendLabel}>{d.name}</span>
-              <span style={styles.sliceLegendPct}>{summary.total ? Math.round((d.value / summary.total) * 100) : 0}%</span>
-            </div>
-          ))}
+          {allTiers.map((d) => {
+            const empty = d.value === 0;
+            return (
+              <div key={d.key} style={{ ...styles.sliceLegendRow, opacity: empty ? 0.45 : 1 }}>
+                <span style={{ ...styles.dot, background: d.color }} />
+                <span style={styles.sliceLegendLabel}>{d.name}</span>
+                <span style={styles.sliceLegendPct}>{summary.total ? Math.round((d.value / summary.total) * 100) : 0}%</span>
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>
