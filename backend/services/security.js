@@ -23,7 +23,10 @@ const LOCK_MINUTES = 15;
 const LIMITS = {
   email: 5, // failed sign-ins for one account
   ip: 20, // failed sign-ins from one address, across any accounts
-  signup: 5, // new accounts from one address (per hour, see below)
+  // New accounts from one address per hour. Generous because mobile networks
+  // (notably in Nigeria) put many customers behind one shared address, so a
+  // group of testers signing up together looks like one address.
+  signup: 20,
 };
 const SIGNUP_WINDOW_MINUTES = 60;
 const RETENTION_DAYS = 90;

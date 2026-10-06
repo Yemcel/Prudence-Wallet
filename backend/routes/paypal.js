@@ -13,10 +13,18 @@ paypalRouter.post("/connect", async (req, res) => {
     return res.status(400).json({ error: "clientId and clientSecret are required" });
   }
   try {
-    const result = await connectPaypalAccount({ clientId, clientSecret, label, userId: req.userId });
+    const result = await connectPaypalAccount({ clientId: clientId.trim(), clientSecret: clientSecret.trim(), label, userId: req.userId });
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    if (err.credentialsRejected) {
+      return res.status(400).json({
+        error: "PayPal didn't accept that Client ID and Secret. Check both were copied in full from a Live app (not Sandbox) in the PayPal Developer Dashboard, then try again.",
+      });
+    }
+    // Couldn't reach PayPal, or PayPal itself failed.
+    if (err.status) return res.status(502).json({ error: "PayPal isn't responding properly right now. Please try again in a few minutes." });
+    console.error("PayPal connect failed:", err.message);
+    res.status(500).json({ error: "Couldn't connect PayPal because of a problem on our side. Please try again later." });
   }
 });
 

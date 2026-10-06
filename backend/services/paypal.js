@@ -43,7 +43,13 @@ async function getAccessToken(clientId, clientSecret) {
     body: "grant_type=client_credentials",
   });
   if (!response.ok) {
-    throw new Error(`PayPal auth failed (${response.status}): ${await response.text()}`);
+    const err = new Error(`PayPal auth failed (${response.status}): ${await response.text()}`);
+    err.status = response.status;
+    // 400/401 from the token endpoint mean the Client ID or Secret is wrong
+    // (or a sandbox key used against live PayPal) — the user's input, not a
+    // server fault.
+    err.credentialsRejected = response.status === 400 || response.status === 401;
+    throw err;
   }
   const data = await response.json();
   return { accessToken: data.access_token, expiresIn: data.expires_in };
