@@ -10,11 +10,14 @@ export const transactionsRouter = Router();
 // Attaches amount_home / home_currency to each row so the frontend never
 // has to do currency math itself — everything it renders is already
 // comparable, regardless of what currency the original transaction was in.
+// amount_usd is included too, so amounts can also be shown in dollars as a
+// common reference.
 function withHomeAmounts(rows, homeCurrency) {
   return rows.map((t) => ({
     ...t,
     home_currency: homeCurrency,
     amount_home: Math.round(convert(t.amount, t.currency, homeCurrency) * 100) / 100,
+    amount_usd: Math.round(convert(t.amount, t.currency, "USD") * 100) / 100,
   }));
 }
 
@@ -100,7 +103,11 @@ transactionsRouter.get("/summary", async (req, res) => {
 
 transactionsRouter.post("/manual", async (req, res) => {
   try {
-    const { merchant, amount, currency = "USD", date, needsReceipt = true } = req.body;
+    const { merchant, amount, date, needsReceipt = true } = req.body;
+    // A manual entry is in the user's own currency unless the app says
+    // otherwise (it used to default to USD, so "2.70" at Sainsbury's was
+    // saved as $2.70).
+    const currency = req.body.currency || (await getHomeCurrency(req.userId));
     if (!merchant || !amount) {
       return res.status(400).json({ error: "merchant and amount are required" });
     }

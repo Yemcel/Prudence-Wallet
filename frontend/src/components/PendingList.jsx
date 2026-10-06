@@ -1,5 +1,6 @@
 import React from "react";
 import { styles } from "../styles/theme.js";
+import AmountStack from "./AmountStack.jsx";
 import { TIERS, currency } from "../constants/ranks.js";
 
 export default function PendingList({ pending, onOpenCoach }) {
@@ -21,14 +22,7 @@ export default function PendingList({ pending, onOpenCoach }) {
                   {t.time ? ` · ${t.time}` : ""} · {t.account_name}
                 </div>
               </div>
-              <div style={styles.pendingAmount}>
-                {currency(t.amount, t.currency)}
-                {t.home_currency && t.currency !== t.home_currency && (
-                  <div style={{ fontSize: 10, color: "#8B95A5", fontWeight: 400 }}>
-                    ≈ {currency(t.amount_home, t.home_currency)}
-                  </div>
-                )}
-              </div>
+              <AmountStack t={t} style={styles.pendingAmount} subSize={10} />
             </button>
           );
         })}

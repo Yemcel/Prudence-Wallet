@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { styles } from "../styles/theme.js";
+import AmountStack from "./AmountStack.jsx";
 import { RANKS, RANK_INDEX, TIERS, currency } from "../constants/ranks.js";
 
 export default function TransactionList({ transactions, onOverrideRank }) {
@@ -24,15 +25,8 @@ export default function TransactionList({ transactions, onOverrideRank }) {
                   {t.date} · {t.account_name}
                 </div>
               </div>
-              <div style={styles.rowAmount}>
-                {currency(t.amount, t.currency)}
-                {t.home_currency && t.currency !== t.home_currency && (
-                  <div style={{ fontSize: 10.5, color: "#8B95A5", fontWeight: 400 }}>
-                    ≈ {currency(t.amount_home, t.home_currency)}
-                  </div>
-                )}
-              </div>
-              <div style={{ position: "relative" }}>
+              <AmountStack t={t} style={styles.rowAmount} />
+              <div style={{ position: "relative", flexShrink: 0 }}>
                 <button
                   style={{ ...styles.rankChip, background: rank.color + "22", color: rank.color, borderColor: rank.color + "55" }}
                   onClick={() => setOpenMenuId(openMenuId === t.id ? null : t.id)}

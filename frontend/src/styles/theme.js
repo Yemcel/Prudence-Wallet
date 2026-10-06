@@ -17,7 +17,7 @@ export const styles = {
   pendingCard: { display: "flex", alignItems: "center", gap: 10, background: "#FFFFFF", border: "1px dashed #C08A2E77", borderRadius: 12, padding: "13px 15px", cursor: "pointer", textAlign: "left", font: "inherit", width: "100%" },
   pendingMerchant: { fontSize: 14, fontWeight: 500 },
   pendingMeta: { fontSize: 11.5, color: "#8B95A5", marginTop: 2 },
-  pendingAmount: { fontFamily: "'JetBrains Mono', monospace", fontSize: 14, color: "#C08A2E" },
+  pendingAmount: { fontFamily: "'JetBrains Mono', monospace", fontSize: 14, color: "#C08A2E", textAlign: "right", whiteSpace: "nowrap", flexShrink: 0 },
   tierGlyph: { width: 16, textAlign: "center", fontSize: 13, flexShrink: 0 },
 
   spectrumLabelRow: { display: "flex", justifyContent: "space-between", fontFamily: "'JetBrains Mono', monospace", fontSize: 10.5, letterSpacing: "0.08em", textTransform: "uppercase", color: "#8B95A5", marginBottom: 8 },
@@ -59,8 +59,10 @@ export const styles = {
   rowMain: { flex: 1, minWidth: 0 },
   rowMerchant: { fontSize: 14, fontWeight: 500 },
   rowMeta: { fontSize: 11.5, color: "#8B95A5", marginTop: 2 },
-  rowAmount: { fontFamily: "'JetBrains Mono', monospace", fontSize: 13.5, width: 68, textAlign: "right" },
-  rankChip: { fontSize: 11, fontWeight: 500, border: "1px solid", borderRadius: 999, padding: "5px 9px", whiteSpace: "nowrap", cursor: "pointer" },
+  // Sized to its content (no fixed width) so long amounts never push the row
+  // wider than a phone screen.
+  rowAmount: { fontFamily: "'JetBrains Mono', monospace", fontSize: 13.5, minWidth: 64, textAlign: "right", whiteSpace: "nowrap", flexShrink: 0 },
+  rankChip: { fontSize: 11, fontWeight: 500, border: "1px solid", borderRadius: 999, padding: "5px 9px", whiteSpace: "nowrap", cursor: "pointer", flexShrink: 0 },
 
   // 100dvh (not inset: 0) so the sheet sits above mobile browser toolbars
   // instead of partly behind them.
