@@ -63,7 +63,7 @@ export default function SavingsProjection({ summary }) {
         </>
       ) : (
         <div style={{ ...styles.card, color: "#6B7280", fontSize: 13 }}>
-          No projected savings yet. Rank a few purchases as Leisure, Luxury, a treat, or Wasteful and this section will show what cutting back on them could add up to.
+          No projected savings yet. Rank a few purchases as Leisure, Splurge, Impulse, or Wasteful and this section will show what cutting back on them could add up to.
         </div>
       )}
     </section>

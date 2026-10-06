@@ -9,7 +9,7 @@ export default function SpectrumBar({ summary }) {
   return (
     <section style={{ ...styles.card, marginBottom: 22 }}>
       <div style={styles.spectrumLabelRow}>
-        <span>Important</span>
+        <span>Essential</span>
         <span>Wasteful</span>
       </div>
       <div style={styles.spectrumBar}>

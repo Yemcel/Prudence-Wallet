@@ -73,7 +73,10 @@ export default function TransactionList({ transactions, onOverrideRank }) {
                         }}
                       >
                         <span style={{ ...styles.dot, background: r.color }} />
-                        {r.label}
+                        <span>
+                          {r.label}
+                          {r.means && <span style={{ display: "block", fontSize: 11.5, fontWeight: 400, color: "#8B95A5" }}>{r.means}</span>}
+                        </span>
                       </div>
                     ))}
                   </div>

@@ -13,7 +13,8 @@ export async function classifyTransaction({ transaction, userAnswer, learnedRule
     ? `Known patterns for this user so far:\n${learnedRules.map((r) => `- ${r}`).join("\n")}`
     : "No patterns learned yet for this user.";
 
-  const system = `You are a spending coach inside a personal finance app. Classify a single transaction into exactly one of these seven prudence tiers, ordered most to least prudent: ${RANKS.map((r) => r.label).join(", ")}.
+  const system = `You are a spending coach inside a personal finance app. Classify a single transaction into exactly one of these seven prudence tiers, ordered most to least prudent:
+${RANKS.map((r, i) => `${i + 1}. ${r.label} — ${r.means}`).join("\n")}
 
 Use the user's own explanation of the purchase, not generic assumptions. If a clear reusable pattern emerges (e.g. "late-night rides after socializing = Wasteful for this user"), extract it as a short rule written in the user's voice. Otherwise return null for learned_rule.
 

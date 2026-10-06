@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { styles } from "../styles/theme.js";
-import { currency } from "../constants/ranks.js";
+import { currency, rankLabel, PURPOSE_SUGGESTIONS } from "../constants/ranks.js";
 import { api } from "../lib/api.js";
 
 export default function CoachModal({ transaction, onClose, onResolved }) {
@@ -16,6 +16,17 @@ export default function CoachModal({ transaction, onClose, onResolved }) {
     inputRef.current?.focus();
   }, []);
 
+  // Tapping a suggestion adds it to the answer (so "Night out" + "Saw it and
+  // wanted it" can be combined), and it can still be edited before sending.
+  const addSuggestion = (text) => {
+    setInput((current) => {
+      const parts = current.split(",").map((p) => p.trim()).filter(Boolean);
+      if (parts.some((p) => p.toLowerCase() === text.toLowerCase())) return current;
+      return [...parts, text].join(", ");
+    });
+    inputRef.current?.focus();
+  };
+
   const submit = async () => {
     if (!input.trim() || loading) return;
     const answer = input.trim();
@@ -26,7 +37,7 @@ export default function CoachModal({ transaction, onClose, onResolved }) {
 
     try {
       const { transaction: updated, reasoning } = await api.classify(transaction.id, answer);
-      setChatLog((log) => [...log, { from: "app", text: `Tagged as ${updated.rank}. ${reasoning || ""}` }]);
+      setChatLog((log) => [...log, { from: "app", text: `Tagged as ${rankLabel(updated.rank)}. ${reasoning || ""}` }]);
       setTimeout(() => onResolved(updated), 1200);
     } catch (e) {
       setError("Couldn't reach the coach — try again.");
@@ -51,12 +62,19 @@ export default function CoachModal({ transaction, onClose, onResolved }) {
           {loading && <div style={styles.bubbleApp}>thinking…</div>}
           {error && <div style={styles.errorText}>{error}</div>}
         </div>
+        <div style={styles.suggestionRow} aria-label="Suggested answers">
+          {PURPOSE_SUGGESTIONS.map((s) => (
+            <button key={s} type="button" style={styles.suggestionChip} onClick={() => addSuggestion(s)} disabled={loading}>
+              {s}
+            </button>
+          ))}
+        </div>
         <div style={styles.chatInputRow}>
           <input
             ref={inputRef}
             style={styles.chatInput}
             value={input}
-            placeholder="Type your answer…"
+            placeholder="Tap a suggestion or type your own…"
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && submit()}
             disabled={loading}
