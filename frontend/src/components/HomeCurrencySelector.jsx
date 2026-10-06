@@ -9,7 +9,7 @@ const styles = {
     border: "1px solid #E7E2D6",
     borderRadius: 8,
     padding: "5px 8px",
-    fontSize: 12.5,
+    fontSize: 16, // 16px so iPhones don't zoom the page when it's tapped
     fontFamily: "inherit",
     background: "#FFFFFF",
     color: "#1C2430",

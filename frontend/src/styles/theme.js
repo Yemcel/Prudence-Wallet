@@ -76,13 +76,15 @@ export const styles = {
   modalAmount: { fontFamily: "'JetBrains Mono', monospace", fontSize: 15, color: "#6B7280" },
   modalTitle: { fontFamily: "'Fraunces', serif", fontSize: 18, fontWeight: 500, marginBottom: 6 },
   modalSub: { fontSize: 13, color: "#6B7280", marginBottom: 16, lineHeight: 1.5 },
-  formInput: { width: "100%", border: "1px solid #E7E2D6", borderRadius: 10, padding: "12px 14px", fontSize: 14, fontFamily: "inherit", background: "#FFFFFF", marginBottom: 10 },
+  // Inputs are 16px: iPhones zoom the whole page into any smaller text box
+  // when it's tapped, and the page then no longer fits the screen.
+  formInput: { width: "100%", border: "1px solid #E7E2D6", borderRadius: 10, padding: "12px 14px", fontSize: 16, fontFamily: "inherit", background: "#FFFFFF", marginBottom: 10 },
   chatLog: { display: "flex", flexDirection: "column", gap: 8, marginBottom: 14, maxHeight: 220, overflowY: "auto" },
   bubbleApp: { alignSelf: "flex-start", background: "#FFFFFF", border: "1px solid #E7E2D6", borderRadius: "12px 12px 12px 4px", padding: "10px 14px", fontSize: 14, maxWidth: "85%" },
   bubbleUser: { alignSelf: "flex-end", background: "#1C2430", color: "#F6F4EF", borderRadius: "12px 12px 4px 12px", padding: "10px 14px", fontSize: 14, maxWidth: "85%" },
   errorText: { color: "#A83B32", fontSize: 13 },
   chatInputRow: { display: "flex", gap: 8, marginBottom: 10 },
-  chatInput: { flex: 1, border: "1px solid #E7E2D6", borderRadius: 10, padding: "12px 14px", fontSize: 14, fontFamily: "inherit", background: "#FFFFFF" },
+  chatInput: { flex: 1, minWidth: 0, border: "1px solid #E7E2D6", borderRadius: 10, padding: "12px 14px", fontSize: 16, fontFamily: "inherit", background: "#FFFFFF" },
   chatSend: { background: "#3F6E5B", color: "#fff", border: "none", borderRadius: 10, padding: "0 18px", fontSize: 14, fontWeight: 500, cursor: "pointer" },
   modalActions: { display: "flex", flexDirection: "column", gap: 10, marginBottom: 12 },
   modalBtnPrimary: { background: "#3F6E5B", color: "#fff", border: "none", borderRadius: 10, padding: "14px", fontSize: 14.5, fontWeight: 500, cursor: "pointer" },

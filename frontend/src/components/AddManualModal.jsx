@@ -28,7 +28,7 @@ export default function AddManualModal({ onClose, onAdded }) {
         <div style={styles.modalTitle}>Add manual spend</div>
         <div style={styles.modalSub}>Cash, local vendors, anything not connected. We'll ask what it was for right after.</div>
         <input style={styles.formInput} placeholder="Merchant or what it was" value={merchant} onChange={(e) => setMerchant(e.target.value)} />
-        <input style={styles.formInput} placeholder="Amount" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} />
+        <input style={styles.formInput} placeholder="Amount" type="number" inputMode="decimal" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} />
         {error && <div style={styles.errorText}>{error}</div>}
         <div style={styles.modalActions}>
           <button style={styles.modalBtnPrimary} onClick={submit} disabled={saving || !merchant.trim() || !amount}>
