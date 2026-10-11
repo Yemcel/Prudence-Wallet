@@ -80,24 +80,50 @@ function PaypalConnectForm({ onConnected }) {
     }
   };
 
+  const hint = { fontSize: 12, color: "#6B7280", lineHeight: 1.55 };
+  const label = { display: "block", fontSize: 12.5, fontWeight: 500, margin: "4px 0 6px" };
+
+  // Worded so it can't be mistaken for a request for someone's PayPal login
+  // (people, and the automated phishing filters that scan sites, both read it).
   return (
     <div>
-      <div style={{ fontSize: 12, color: "#8B95A5", marginBottom: 10, lineHeight: 1.5 }}>
-        PayPal doesn't offer a one-click "log in" connection the way a bank does — you'll need your
-        own PayPal REST API credentials (from{" "}
-        <a href="https://developer.paypal.com/dashboard/" target="_blank" rel="noreferrer">
-          developer.paypal.com
-        </a>
-        ) for now.
+      <div style={{ ...hint, background: "#F6F4EF", border: "1px solid #E7E2D6", borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
+        <b style={{ color: "#1C2430" }}>Never enter your PayPal email or password here.</b> This option uses a{" "}
+        <b style={{ color: "#1C2430" }}>developer API key</b> that you create yourself in PayPal's developer
+        dashboard. Prudence uses it only to read your PayPal transactions, and you can revoke it there at any time.
       </div>
-      <input style={styles.formInput} placeholder="Client ID" value={clientId} onChange={(e) => setClientId(e.target.value)} />
+      <ol style={{ ...hint, margin: "0 0 12px", paddingLeft: 18 }}>
+        <li>
+          Open{" "}
+          <a href="https://developer.paypal.com/dashboard/applications/live" target="_blank" rel="noopener noreferrer" style={{ color: "#3F6E5B" }}>
+            PayPal Developer → Apps &amp; Credentials
+          </a>{" "}
+          and sign in there, on PayPal's own site.
+        </li>
+        <li>Create an app with the <i>Transaction search</i> feature switched on.</li>
+        <li>Copy its client ID and secret key into the boxes below.</li>
+      </ol>
+      <label style={label} htmlFor="pp-client-id">PayPal API client ID</label>
       <input
+        id="pp-client-id"
         style={styles.formInput}
-        placeholder="Client Secret"
+        placeholder="From Apps & Credentials"
+        value={clientId}
+        onChange={(e) => setClientId(e.target.value)}
+        autoComplete="off"
+        spellCheck={false}
+      />
+      <label style={label} htmlFor="pp-secret">PayPal API secret key</label>
+      <input
+        id="pp-secret"
+        style={styles.formInput}
+        placeholder="The app's secret key"
         type="password"
         value={clientSecret}
         onChange={(e) => setClientSecret(e.target.value)}
+        autoComplete="off"
       />
+      <div style={{ ...hint, margin: "-2px 0 10px" }}>Stored encrypted. Remove the connection any time from the Connections list.</div>
       {error && <div style={styles.errorText}>{error}</div>}
       <button style={styles.modalBtnPrimary} onClick={submit} disabled={saving || !clientId.trim() || !clientSecret.trim()}>
         {saving ? "Connecting…" : "Connect PayPal"}
@@ -143,7 +169,7 @@ export default function ConnectAccountsModal({ onClose, onConnected }) {
             onClick={() => setShowPaypal(true)}
             style={{ background: "none", border: "none", padding: 0, fontSize: 12, color: "#8B95A5", textDecoration: "underline", cursor: "pointer" }}
           >
-            Advanced: connect PayPal with your own API keys
+            Advanced: connect PayPal with a developer API key
           </button>
         )}
 
