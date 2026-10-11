@@ -6,6 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Prudence Wallet – personal spending tracker</title>
     <meta name="description" content="Prudence Wallet is a personal spending tracker that ranks each purchase from Essential to Wasteful, so you can see where your money really goes. Not a bank or crypto wallet." />
+    <meta property="og:title" content="Prudence Wallet – personal spending tracker" />
+    <meta property="og:description" content="Rank each purchase from Essential to Wasteful and see where your money really goes. Not a bank or crypto wallet: it never holds or moves money." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://www.prudencewallet.com/" />
+    <link rel="canonical" href="https://www.prudencewallet.com/" />
     <meta name="theme-color" content="#1C2430" />
     <link rel="icon" type="image/png" href="/icons/favicon.png" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
@@ -20,10 +25,167 @@
       * { box-sizing: border-box; }
       body { margin: 0; background: #F6F4EF; padding-top: env(safe-area-inset-top, 0px); }
       ::placeholder { color: #A8B0BE; }
+
+      /* ---- Public front page (shown before sign-in; plain HTML so it reads without JavaScript) ---- */
+      .lp { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; color: #1C2430; line-height: 1.55; }
+      .lp a { color: inherit; }
+      .lp-wrap { max-width: 1040px; margin: 0 auto; padding: 0 20px; }
+      .lp-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 20px 0; }
+      .lp-brand { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 600; text-decoration: none; display: flex; align-items: center; gap: 10px; }
+      .lp-brand img { width: 30px; height: 30px; border-radius: 8px; }
+      .lp-signin { font-size: 14px; font-weight: 500; text-decoration: none; padding: 9px 16px; border: 1px solid #D6D0C2; border-radius: 999px; background: #FFFFFF; white-space: nowrap; }
+
+      .lp-hero { display: grid; grid-template-columns: 1fr; gap: 36px; align-items: center; padding: 28px 0 56px; }
+      .lp-eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #8B9A5B; margin: 0 0 12px; }
+      .lp h1 { font-family: 'Fraunces', serif; font-weight: 500; font-size: clamp(34px, 6vw, 54px); line-height: 1.08; margin: 0 0 18px; letter-spacing: -0.01em; }
+      .lp-lede { font-size: 17px; color: #4B5563; margin: 0 0 26px; max-width: 34em; }
+      .lp-ctas { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 22px; }
+      .lp-btn { display: inline-block; text-decoration: none; font-weight: 500; font-size: 15px; border-radius: 12px; padding: 14px 22px; text-align: center; }
+      .lp-btn-primary { background: #3F6E5B; color: #FFFFFF !important; }
+      .lp-btn-secondary { background: #FFFFFF; border: 1px solid #D6D0C2; }
+      .lp-note { display: flex; gap: 10px; align-items: flex-start; font-size: 13.5px; color: #4B5563; background: #FFFFFF; border: 1px solid #E7E2D6; border-radius: 12px; padding: 12px 14px; max-width: 34em; margin: 0; }
+      .lp-note b { color: #1C2430; }
+      .lp-shot { justify-self: center; width: 100%; max-width: 360px; border-radius: 22px; border: 1px solid #E7E2D6; background: #FFFFFF; padding: 10px; box-shadow: 0 18px 40px -22px rgba(28, 36, 48, 0.35); }
+      .lp-shot img { display: block; width: 100%; height: auto; border-radius: 14px; }
+      .lp-shot figcaption { font-size: 12px; color: #8B95A5; text-align: center; padding: 8px 0 2px; }
+
+      .lp-section { padding: 48px 0; border-top: 1px solid #E7E2D6; }
+      .lp h2 { font-family: 'Fraunces', serif; font-weight: 500; font-size: clamp(24px, 4vw, 32px); margin: 0 0 8px; line-height: 1.2; }
+      .lp-sub { color: #6B7280; margin: 0 0 28px; max-width: 40em; }
+      .lp-steps { display: grid; grid-template-columns: 1fr; gap: 14px; list-style: none; margin: 0; padding: 0; }
+      .lp-step { background: #FFFFFF; border: 1px solid #E7E2D6; border-radius: 14px; padding: 20px; }
+      .lp-step .n { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #8B9A5B; }
+      .lp-step h3 { font-size: 16px; margin: 6px 0 6px; font-weight: 600; }
+      .lp-step p { margin: 0; font-size: 14.5px; color: #4B5563; }
+
+      .lp-tiers { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 0; padding: 0; }
+      .lp-tier { display: flex; align-items: center; gap: 8px; background: #FFFFFF; border: 1px solid #E7E2D6; border-radius: 999px; padding: 8px 14px; font-size: 14px; }
+      .lp-tier i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+      .lp-tier span { color: #8B95A5; font-size: 12.5px; }
+
+      .lp-not { display: grid; grid-template-columns: 1fr; gap: 12px; list-style: none; margin: 0; padding: 0; }
+      .lp-not li { background: #FFFFFF; border: 1px solid #E7E2D6; border-radius: 12px; padding: 14px 16px; font-size: 14.5px; }
+      .lp-not li b { display: block; margin-bottom: 2px; }
+      .lp-not li span { color: #6B7280; }
+
+      .lp-final { text-align: center; }
+      .lp-final .lp-ctas { justify-content: center; }
+
+      .lp-foot { border-top: 1px solid #E7E2D6; padding: 28px 0 44px; font-size: 13px; color: #6B7280; text-align: center; }
+      .lp-foot nav { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 18px; margin-bottom: 10px; }
+      .lp-foot a { text-decoration: none; }
+      .lp-foot a:hover, .lp-signin:hover { text-decoration: underline; }
+
+      @media (min-width: 820px) {
+        .lp-hero { grid-template-columns: 1.15fr 0.85fr; gap: 56px; padding: 48px 0 72px; }
+        .lp-steps { grid-template-columns: repeat(3, 1fr); }
+        .lp-not { grid-template-columns: repeat(3, 1fr); }
+      }
     </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="lp">
+        <div class="lp-wrap">
+          <header class="lp-nav">
+            <a class="lp-brand" href="/"><img src="/icons/icon-192.png" alt="" />Prudence Wallet</a>
+            <a class="lp-signin" href="/#signin">Sign in</a>
+          </header>
+
+          <main>
+            <section class="lp-hero">
+              <div>
+                <p class="lp-eyebrow">Personal spending tracker</p>
+                <h1>See which purchases really mattered.</h1>
+                <p class="lp-lede">
+                  Prudence Wallet ranks every purchase you make, from Essential to Wasteful. Each week you see where your
+                  money really went and how much you could save by cutting the parts you regret.
+                </p>
+                <div class="lp-ctas">
+                  <a class="lp-btn lp-btn-primary" href="/#signup">Create a free account</a>
+                  <a class="lp-btn lp-btn-secondary" href="/#signin">Sign in</a>
+                </div>
+                <p class="lp-note">
+                  <span aria-hidden="true">🛡️</span>
+                  <span><b>Not a bank, and not a crypto wallet.</b> Prudence only reads and ranks your spending. It never
+                  holds or moves money, and it will never ask for your card number, bank password or a seed phrase.</span>
+                </p>
+              </div>
+              <figure class="lp-shot">
+                <img src="/img/week-by-category.webp" width="780" height="1070" alt="Prudence dashboard showing a week of spending split into Essential, Necessary, Worthwhile, Leisure, Splurge, Impulse and Wasteful" />
+                <figcaption>A week of spending, ranked (example data)</figcaption>
+              </figure>
+            </section>
+
+            <section class="lp-section">
+              <h2>How it works</h2>
+              <p class="lp-sub">Three steps, a couple of minutes a week.</p>
+              <ol class="lp-steps">
+                <li class="lp-step">
+                  <div class="n">01</div>
+                  <h3>Add your spending</h3>
+                  <p>Type in purchases yourself, or link an account so they arrive on their own. Works in your home currency, from pounds to naira.</p>
+                </li>
+                <li class="lp-step">
+                  <div class="n">02</div>
+                  <h3>Rank each purchase</h3>
+                  <p>Prudence suggests a tier and asks what it was for. It learns your habits, so repeat purchases get ranked for you.</p>
+                </li>
+                <li class="lp-step">
+                  <div class="n">03</div>
+                  <h3>See the honest picture</h3>
+                  <p>Weekly totals by tier, a gentle nudge when spending drifts, and what you'd save in a year by trimming the wasteful end.</p>
+                </li>
+              </ol>
+            </section>
+
+            <section class="lp-section">
+              <h2>Seven tiers, from Essential to Wasteful</h2>
+              <p class="lp-sub">Not all spending is equal. Every purchase lands somewhere on this scale.</p>
+              <ul class="lp-tiers">
+                <li class="lp-tier"><i style="background:#3F6E5B"></i>Essential <span>must be paid</span></li>
+                <li class="lp-tier"><i style="background:#5C8168"></i>Necessary <span>everyday basics</span></li>
+                <li class="lp-tier"><i style="background:#8B9A5B"></i>Worthwhile <span>good value</span></li>
+                <li class="lp-tier"><i style="background:#C08A2E"></i>Leisure <span>planned enjoyment</span></li>
+                <li class="lp-tier"><i style="background:#BD6A2E"></i>Splurge <span>a pricey extra</span></li>
+                <li class="lp-tier"><i style="background:#A8502F"></i>Impulse <span>bought in the moment</span></li>
+                <li class="lp-tier"><i style="background:#A83B32"></i>Wasteful <span>you'd take it back</span></li>
+              </ul>
+            </section>
+
+            <section class="lp-section">
+              <h2>What Prudence is not</h2>
+              <p class="lp-sub">Plainly, so there's no confusion.</p>
+              <ul class="lp-not">
+                <li><b>Not a bank or payment app</b><span>It can't send, receive or hold money.</span></li>
+                <li><b>Not a crypto wallet</b><span>No coins, no tokens, and it will never ask for a seed phrase or private key.</span></li>
+                <li><b>Not after your bank login</b><span>Optional bank links go through Plaid's own secure window; Prudence never sees your bank password.</span></li>
+              </ul>
+            </section>
+
+            <section class="lp-section lp-final">
+              <h2>Start with this week</h2>
+              <p class="lp-sub" style="margin-left:auto;margin-right:auto">Free while in testing. Add a few purchases and see where they land.</p>
+              <div class="lp-ctas">
+                <a class="lp-btn lp-btn-primary" href="/#signup">Create a free account</a>
+                <a class="lp-btn lp-btn-secondary" href="/#signin">Sign in</a>
+              </div>
+            </section>
+          </main>
+
+          <footer class="lp-foot">
+            <nav aria-label="Site">
+              <a href="/about.html">About</a>
+              <a href="/privacy.html">Privacy</a>
+              <a href="/terms.html">Terms</a>
+              <a href="/.well-known/security.txt">Security</a>
+              <a href="mailto:yemcels@gmail.com">Contact</a>
+            </nav>
+            <div>© 2026 Prudence Wallet. Made in London.</div>
+          </footer>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

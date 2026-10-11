@@ -129,6 +129,8 @@ export default function App() {
   const handleLogout = () => {
     api.logout();
     setUser(null);
+    // Back to the public front page (a full load, so the app is unmounted).
+    window.location.assign("/");
   };
 
   if (!authChecked) return null; // brief instant — avoids a login-screen flash for already-signed-in users

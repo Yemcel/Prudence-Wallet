@@ -1,9 +1,17 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { styles } from "../styles/theme.js";
 import { api } from "../lib/api.js";
 
 export default function AuthScreen({ onAuthenticated }) {
-  const [mode, setMode] = useState("login"); // "login" | "signup"
+  // The front page links here as /#signin or /#signup.
+  const modeFromHash = () => (window.location.hash === "#signup" ? "signup" : "login");
+  const [mode, setMode] = useState(modeFromHash); // "login" | "signup"
+
+  useEffect(() => {
+    const onHash = () => setMode(modeFromHash());
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
@@ -31,7 +39,9 @@ export default function AuthScreen({ onAuthenticated }) {
   return (
     <div style={{ ...styles.page, display: "flex", alignItems: "center", minHeight: "100vh" }}>
       <div style={{ width: "100%" }}>
-        <div style={styles.eyebrow}>Prudence Wallet</div>
+        <a href="/" style={{ ...styles.eyebrow, display: "inline-block", textDecoration: "none" }}>
+          ← Prudence Wallet
+        </a>
         <h1 style={{ ...styles.title, marginBottom: 8 }}>
           {mode === "login" ? "Welcome back" : "Create your account"}
         </h1>
@@ -99,8 +109,10 @@ export default function AuthScreen({ onAuthenticated }) {
           type="button"
           style={{ ...styles.modalClose, marginTop: 16 }}
           onClick={() => {
-            setMode((m) => (m === "login" ? "signup" : "login"));
+            const next = mode === "login" ? "signup" : "login";
+            setMode(next);
             setError(null);
+            window.history.replaceState(null, "", next === "signup" ? "#signup" : "#signin");
           }}
         >
           {mode === "login" ? "Need an account? Sign up" : "Already have an account? Sign in"}
